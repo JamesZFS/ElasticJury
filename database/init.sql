@@ -3,12 +3,14 @@ USE ElasticJury;
 CREATE TABLE IF NOT EXISTS Cases -- 案件数据库
 (
     `id`      INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    `title`   VARCHAR(128)  NOT NULL, -- 标题
     `date`    DATE          NULL,     -- TODO 案发时间？一审时间？
-    `court`   CHAR(32)      NULL,     -- 法院
+    `court`   CHAR(64)      NULL,     -- 法院
+    `judge`   CHAR(64)      NULL,     -- 法官
     `parties` VARCHAR(512)  NULL,     -- 当事人信息：原告(plaintiff) 被告(defendant) 法定代表人...
-    `judge`   CHAR(32)      NULL,     -- 法官
-    `law`     VARCHAR(1024) NULL,     -- 法律，考虑到一对多关系，倒排索引需单独建表
-    `tag`     CHAR(128)     NULL,     -- 标签，考虑到一对多关系，倒排索引需单独建表
+    `law`     VARCHAR(4096) NULL,     -- 法律，考虑到一对多关系，倒排索引需单独建表
+    `tag`     VARCHAR(1024) NULL,     -- 标签，考虑到一对多关系，倒排索引需单独建表
+    `link`    VARCHAR(1024) NULL,     -- 原网页链接
     `detail`  LONGTEXT      NOT NULL, -- 案情 TODO discussion on choice of data type
     PRIMARY KEY (`id` ASC),
     INDEX `date_idx` (`date` ASC),    -- TODO discussion
@@ -34,7 +36,7 @@ CREATE TABLE IF NOT EXISTS WordCase -- 词倒排索引数据库（一对多）, 
 CREATE TABLE IF NOT EXISTS Laws -- Law -> LawId
 (
     `id`  INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `law` CHAR(64)     NOT NULL,
+    `law` VARCHAR(512) NOT NULL,
     PRIMARY KEY (`id` ASC),
     INDEX `law_idx` (`law` ASC)
 );
@@ -48,8 +50,8 @@ CREATE TABLE IF NOT EXISTS LawCase
 );
 CREATE TABLE IF NOT EXISTS Tags -- Tag -> TagId
 (
-    `id`  INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `tag` CHAR(64)     NOT NULL,
+    `id`  INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    `tag` VARCHAR(1024) NOT NULL,
     PRIMARY KEY (`id` ASC),
     INDEX `tag_idx` (`tag` ASC)
 );
