@@ -2,64 +2,36 @@ CREATE DATABASE IF NOT EXISTS ElasticJury DEFAULT CHARACTER SET utf8;
 USE ElasticJury;
 CREATE TABLE IF NOT EXISTS Cases -- 案件数据库
 (
-    `id`      INT UNSIGNED  NOT NULL AUTO_INCREMENT,
-    `title`   VARCHAR(128)  NOT NULL, -- 标题
-    `date`    DATE          NULL,     -- TODO 案发时间？一审时间？
-    `court`   CHAR(64)      NULL,     -- 法院
-    `judge`   CHAR(64)      NULL,     -- 法官
-    `parties` VARCHAR(512)  NULL,     -- 当事人信息：原告(plaintiff) 被告(defendant) 法定代表人...
-    `law`     VARCHAR(4096) NULL,     -- 法律，考虑到一对多关系，倒排索引需单独建表
-    `tag`     VARCHAR(1024) NULL,     -- 标签，考虑到一对多关系，倒排索引需单独建表
-    `link`    VARCHAR(1024) NULL,     -- 原网页链接
-    `detail`  LONGTEXT      NOT NULL, -- 案情 TODO discussion on choice of data type
-    PRIMARY KEY (`id` ASC),
-    INDEX `date_idx` (`date` ASC),    -- TODO discussion
-    INDEX `court_idx` (`court` ASC),
-    INDEX `judge_idx` (`judge` ASC)
-);
-CREATE TABLE IF NOT EXISTS Words -- 词数据库, word -> wordId
-(
-    `id`   INT UNSIGNED NOT NULL AUTO_INCREMENT, -- wordId
-    `word` CHAR(32)     NOT NULL,                -- 去停用词，词根化
-    PRIMARY KEY (`id` ASC),
-    INDEX `word_idx` (`word` ASC)                -- TODO discussion
-);
-CREATE TABLE IF NOT EXISTS WordCase -- 词倒排索引数据库（一对多）, wordId -> [](caseId, weight)
-(
-    `id`     INT UNSIGNED   NOT NULL AUTO_INCREMENT, -- 索引条目的id
-    `wordId` INT UNSIGNED   NOT NULL,
-    `caseId` INT UNSIGNED   NOT NULL,
-    `weight` FLOAT UNSIGNED NOT NULL,
-    PRIMARY KEY (`id` ASC),
-    INDEX `wordId_idx` (`wordId` ASC)                -- TODO discussion 有套娃嫌疑，但似乎必须有这个字段？
-);
-CREATE TABLE IF NOT EXISTS Laws -- Law -> LawId
-(
-    `id`  INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `law` VARCHAR(512) NOT NULL,
-    PRIMARY KEY (`id` ASC),
-    INDEX `law_idx` (`law` ASC)
-);
-CREATE TABLE IF NOT EXISTS LawCase
-(
     `id`     INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `lawId`  INT UNSIGNED NOT NULL,
-    `caseId` INT UNSIGNED NOT NULL,
-    PRIMARY KEY (`id` ASC),
-    INDEX `lawId_idx` (`lawId` ASC)
+    `title`  TINYTEXT     NOT NULL, -- 标题
+    `judge`  TEXT         NULL,     -- 法官，考虑到一对多关系，倒排索引需单独建表
+    `law`    TEXT         NULL,     -- 法律，考虑到一对多关系，倒排索引需单独建表
+    `tag`    TEXT         NULL,     -- 标签/关键词，考虑到一对多关系，倒排索引需单独建表
+    `link`   TEXT         NULL,     -- 原网页链接
+    `detail` LONGTEXT     NOT NULL, -- 案情
+    PRIMARY KEY (`id` ASC)
 );
-CREATE TABLE IF NOT EXISTS Tags -- Tag -> TagId
+CREATE TABLE IF NOT EXISTS WordIndex -- 词倒排索引数据库（一对多）, word -> [](case, weight)
 (
-    `id`  INT UNSIGNED  NOT NULL AUTO_INCREMENT,
-    `tag` VARCHAR(1024) NOT NULL,
-    PRIMARY KEY (`id` ASC),
-    INDEX `tag_idx` (`tag` ASC)
+    `word`   VARCHAR(64)  NOT NULL,
+    `case`   INT UNSIGNED NOT NULL, -- id of case
+    `weight` FLOAT        NOT NULL
 );
-CREATE TABLE IF NOT EXISTS TagCase
+CREATE TABLE IF NOT EXISTS JudgeIndex
 (
-    `id`     INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `tagId`  INT UNSIGNED NOT NULL,
-    `caseId` INT UNSIGNED NOT NULL,
-    PRIMARY KEY (`id` ASC),
-    INDEX `caseId_idx` (`tagId` ASC)
+    `judge`  VARCHAR(64)  NOT NULL,
+    `case`   INT UNSIGNED NOT NULL,
+    `weight` FLOAT        NOT NULL
+);
+CREATE TABLE IF NOT EXISTS LawIndex
+(
+    `law`    TEXT         NOT NULL,
+    `case`   INT UNSIGNED NOT NULL,
+    `weight` FLOAT        NOT NULL
+);
+CREATE TABLE IF NOT EXISTS TagIndex
+(
+    `tag`    VARCHAR(128) NOT NULL,
+    `case`   INT UNSIGNED NOT NULL,
+    `weight` FLOAT        NOT NULL
 );
