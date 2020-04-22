@@ -29,14 +29,13 @@ var (
 	searchCaseIdsByTag   = makeSearcher("TagIndex", "tag")
 	searchCaseIdsByLaw   = makeSearcher("LawIndex", "law")
 	searchCaseIdsByJudge = makeSearcher("JudgeIndex", "judge")
-	emptySearchResponse  = gin.H{
-		"count":  0,
-		"result": searchResultSet{},
-	}
+	emptySearchResponse  = searchResultSet{}.toResponse()
 )
 
 func MakeSearchHandler(db *sql.DB) gin.HandlerFunc {
 	return func(context *gin.Context) {
+		s := searchResultSet{}
+		s[1] = 1.1
 		// Parse queries:
 		words := PreprocessWords(strings.Split(context.Query("word"), ","))
 		tags := FilterStrs(strings.Split(context.Query("tag"), ","), NotWhiteSpace)
@@ -48,6 +47,8 @@ func MakeSearchHandler(db *sql.DB) gin.HandlerFunc {
 		} else {
 			mode = modeAnd
 		}
+
+		// Performance searching for each field:
 		var (
 			result    searchResultSet
 			newResult searchResultSet
@@ -70,7 +71,7 @@ func MakeSearchHandler(db *sql.DB) gin.HandlerFunc {
 				context.Status(http.StatusInternalServerError)
 				panic(err)
 			}
-			result = mergeSearchResult(newResult, result)
+			result = newResult.merge(result)
 			if len(result) == 0 { // early stop with empty response
 				context.JSON(http.StatusOK, emptySearchResponse)
 				return
@@ -82,7 +83,7 @@ func MakeSearchHandler(db *sql.DB) gin.HandlerFunc {
 				context.Status(http.StatusInternalServerError)
 				panic(err)
 			}
-			result = mergeSearchResult(newResult, result)
+			result = newResult.merge(result)
 			if len(result) == 0 { // early stop with empty response
 				context.JSON(http.StatusOK, emptySearchResponse)
 				return
@@ -94,13 +95,13 @@ func MakeSearchHandler(db *sql.DB) gin.HandlerFunc {
 				context.Status(http.StatusInternalServerError)
 				panic(err)
 			}
-			result = mergeSearchResult(newResult, result)
+			result = newResult.merge(result)
+		}
+		if result == nil {
+			result = searchResultSet{}
 		}
 
-		context.JSON(http.StatusOK, gin.H{
-			"count":  len(result),
-			"result": result,
-		})
+		context.JSON(http.StatusOK, result.toResponse())
 	}
 }
 
@@ -149,22 +150,29 @@ func makeSearcher(tableName string, keyName string) caseIdSearcher {
 }
 
 // Intersect search results, nil set stands for **full set**
-func mergeSearchResult(set1, set2 searchResultSet) searchResultSet {
-	if set1 == nil {
-		return set2
+func (s searchResultSet) merge(t searchResultSet) searchResultSet {
+	if s == nil {
+		return t
 	}
-	if set2 == nil {
-		return set1
+	if t == nil {
+		return s
 	}
-	if len(set2) < len(set1) {
-		return mergeSearchResult(set2, set1)
+	if len(t) < len(s) {
+		return t.merge(s)
 	}
-	// Assume len(set1) <= len(set2)
+	// Assume len(s) <= len(t)
 	res := searchResultSet{}
-	for id, w1 := range set1 {
-		if w2, contains := set2[id]; contains {
+	for id, w1 := range s {
+		if w2, contains := t[id]; contains {
 			res[id] = w1 + w2 // TODO maybe other operations
 		}
 	}
 	return res
+}
+
+func (s searchResultSet) toResponse() gin.H {
+	return gin.H{
+		"count":  len(s),
+		"result": s,
+	}
 }
