@@ -12,7 +12,7 @@ type App struct {
 	db *sql.DB
 }
 
-/// Return a new app instance
+// Return a new app instance
 func NewApp() *App {
 	// Setup db:
 	db, err := sql.Open("mysql", dataSourceName)
