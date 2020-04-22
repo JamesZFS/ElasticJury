@@ -2,7 +2,6 @@ package app
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
@@ -45,9 +44,9 @@ func MakeSearchHandler(db *sql.DB) gin.HandlerFunc {
 func searchCaseIdsByWords(db *sql.DB, words []string, mode bool) (searchResultSet, error) {
 	result := searchResultSet{}
 	for i, word := range words { // query each word in `WordIndex` table
+		//var newResult searchResultSet
 		newResult := searchResultSet{}
 		word = preprocessWord(word)
-		fmt.Println("query word = ", word)
 		rows, err := db.Query("SELECT `caseId`, `weight` FROM WordIndex WHERE `word` = ?", word)
 		if err != nil {
 			return nil, err
@@ -70,15 +69,12 @@ func searchCaseIdsByWords(db *sql.DB, words []string, mode bool) (searchResultSe
 					}
 				}
 			} else { // modeOr
-				oldWeight, contains := result[caseId]
-				if contains {
-					newResult[caseId] = oldWeight + weight
-				} else {
-					newResult[caseId] = weight
-				}
+				result[caseId] += weight
 			}
 		}
-		result = newResult
+		if mode == modeAnd {
+			result = newResult
+		}
 	}
 	return result, nil
 }

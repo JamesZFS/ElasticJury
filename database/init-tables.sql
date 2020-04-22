@@ -1,5 +1,3 @@
-CREATE DATABASE IF NOT EXISTS ElasticJury DEFAULT CHARACTER SET utf8;
-USE ElasticJury;
 CREATE TABLE IF NOT EXISTS Cases # 案件数据库
 (
     `id`     INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -10,32 +8,32 @@ CREATE TABLE IF NOT EXISTS Cases # 案件数据库
     `link`   TEXT         NULL,     # 原网页链接
     `detail` LONGTEXT     NOT NULL, # 案情
     PRIMARY KEY (`id` ASC)
-);
+) CHAR SET utf8;
 CREATE TABLE IF NOT EXISTS WordIndex # 词倒排索引数据库（一对多）, word -> [](case, weight)
 (
     `word`   VARCHAR(64)  NOT NULL,
     `caseId` INT UNSIGNED NOT NULL,
     `weight` FLOAT        NOT NULL,
-    FOREIGN KEY (`caseId`) REFERENCES Cases(`id`)
-);
+    FOREIGN KEY (`caseId`) REFERENCES Cases (`id`)
+) CHAR SET utf8;
 CREATE TABLE IF NOT EXISTS JudgeIndex
 (
     `judge`  VARCHAR(64)  NOT NULL,
     `caseId` INT UNSIGNED NOT NULL,
     `weight` FLOAT        NOT NULL,
-    FOREIGN KEY (`caseId`) REFERENCES Cases(`id`)
-);
+    FOREIGN KEY (`caseId`) REFERENCES Cases (`id`)
+) CHAR SET utf8;
 CREATE TABLE IF NOT EXISTS LawIndex
 (
     `law`    TEXT         NOT NULL,
     `caseId` INT UNSIGNED NOT NULL,
     `weight` FLOAT        NOT NULL,
-    FOREIGN KEY (`caseId`) REFERENCES Cases(`id`)
-);
+    FOREIGN KEY (`caseId`) REFERENCES Cases (`id`)
+) CHAR SET utf8;
 CREATE TABLE IF NOT EXISTS TagIndex
 (
     `tag`    VARCHAR(128) NOT NULL,
     `caseId` INT UNSIGNED NOT NULL,
     `weight` FLOAT        NOT NULL,
-    FOREIGN KEY (`caseId`) REFERENCES Cases(`id`)
-);
+    FOREIGN KEY (`caseId`) REFERENCES Cases (`id`)
+) CHAR SET utf8;

@@ -4,9 +4,7 @@ import (
 	"database/sql"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
-	"io/ioutil"
 	"net/http"
-	"strings"
 )
 
 type App struct {
@@ -17,26 +15,18 @@ type App struct {
 /// Return a new app instance
 func NewApp() *App {
 	// Setup db:
-	db, err1 := sql.Open("mysql", dataBaseName)
-	{
-		if err1 != nil {
-			panic(err1)
-		}
-		bytes, err2 := ioutil.ReadFile(initScriptPath)
-		if err2 != nil {
-			panic(err2)
-		}
-		scripts := strings.Split(string(bytes), ";")
-		for _, script := range scripts {
-			if strings.TrimSpace(script) == "" {
-				continue
-			}
-			if _, err3 := db.Exec(script); err3 != nil { // execute init sql script
-				panic(err3)
-			}
-		}
-		println("Database initialized.")
+	db, err := sql.Open("mysql", dataSourceName)
+	if err != nil {
+		panic(err)
 	}
+	// language=MySQL
+	{
+		// Create and use `ElasticJury`
+		mustExec(db, "CREATE DATABASE IF NOT EXISTS ElasticJury DEFAULT CHARACTER SET utf8")
+		mustExec(db, "USE ElasticJury")
+		mustExecScriptFile(db, initTableScriptPath)
+	}
+	println("Database initialized.")
 
 	// Setup router:
 	// Disable Console Color

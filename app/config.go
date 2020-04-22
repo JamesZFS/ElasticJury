@@ -1,6 +1,7 @@
 package app
 
 const (
-	dataBaseName   = "root:mdty2020@/"
-	initScriptPath = "database/init.sql"
+	dataSourceName         = "root:mdty2020@/"
+	initTableScriptPath    = "database/init-tables.sql"
+	initTestDataScriptPath = "database/init-test-data.sql"
 )
