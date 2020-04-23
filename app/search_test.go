@@ -1,8 +1,6 @@
 package app
 
 import (
-	"database/sql"
-	_ "github.com/go-sql-driver/mysql"
 	"path"
 	"reflect"
 	"testing"
@@ -93,7 +91,7 @@ func Test_searchCaseIdsByWord(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := searchCaseIdsByWord(db, tt.args.words, tt.args.mode)
+			got, err := db.searchCaseIdsByWord(tt.args.words, tt.args.mode)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("searchCaseIdsByWord() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -152,7 +150,7 @@ func Test_searchCaseIdsByTag(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := searchCaseIdsByTag(db, tt.args.tags, tt.args.mode)
+			got, err := db.searchCaseIdsByTag(tt.args.tags, tt.args.mode)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("searchCaseIdsByTag() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -166,8 +164,8 @@ func Test_searchCaseIdsByTag(t *testing.T) {
 
 func Test_mergeSearchResult(t *testing.T) {
 	type args struct {
-		set1 searchResultSet
-		set2 searchResultSet
+		s searchResultSet
+		t searchResultSet
 	}
 	tests := []struct {
 		name string
@@ -177,20 +175,20 @@ func Test_mergeSearchResult(t *testing.T) {
 		{
 			name: "Merge empty sets",
 			args: args{
-				set1: searchResultSet{},
-				set2: searchResultSet{},
+				s: searchResultSet{},
+				t: searchResultSet{},
 			},
 			want: searchResultSet{},
 		},
 		{
 			name: "Merge not empty 1",
 			args: args{
-				set1: searchResultSet{
+				s: searchResultSet{
 					1: 0.5,
 					2: 0.8,
 					3: 0.1,
 				},
-				set2: searchResultSet{
+				t: searchResultSet{
 					1: 0.1,
 					2: 0.2,
 					3: 0.1,
@@ -205,11 +203,11 @@ func Test_mergeSearchResult(t *testing.T) {
 		{
 			name: "Merge not empty 2",
 			args: args{
-				set1: searchResultSet{
+				s: searchResultSet{
 					2: 0.1,
 					3: 0.0,
 				},
-				set2: searchResultSet{
+				t: searchResultSet{
 					1: 0.1,
 					2: 0.1,
 				},
@@ -221,12 +219,12 @@ func Test_mergeSearchResult(t *testing.T) {
 		{
 			name: "Merge not empty 3",
 			args: args{
-				set1: searchResultSet{
+				s: searchResultSet{
 					1: 0.5,
 					2: 0.8,
 					3: 0.1,
 				},
-				set2: searchResultSet{
+				t: searchResultSet{
 					1: 0.1,
 					3: 0.1,
 				},
@@ -239,11 +237,11 @@ func Test_mergeSearchResult(t *testing.T) {
 		{
 			name: "Merge empty",
 			args: args{
-				set1: searchResultSet{
+				s: searchResultSet{
 					2: 0.1,
 					3: 0.8,
 				},
-				set2: searchResultSet{
+				t: searchResultSet{
 					1: 0.1,
 					4: 0.1,
 				},
@@ -253,8 +251,8 @@ func Test_mergeSearchResult(t *testing.T) {
 		{
 			name: "Merge with nil 1",
 			args: args{
-				set1: nil,
-				set2: searchResultSet{
+				s: nil,
+				t: searchResultSet{
 					1: 0.4,
 					2: 0.2,
 				},
@@ -267,40 +265,40 @@ func Test_mergeSearchResult(t *testing.T) {
 		{
 			name: "Merge with nil 2",
 			args: args{
-				set1: nil,
-				set2: nil,
+				s: nil,
+				t: nil,
 			},
 			want: nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := mergeSearchResult(tt.args.set1, tt.args.set2); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("mergeSearchResult() = %v, want %v", got, tt.want)
+			if got := tt.args.s.merge(tt.args.t); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("merge() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func prologue() *sql.DB {
-	db, err := sql.Open("mysql", dataSourceName)
+func prologue() database {
+	db, err := newDatabase()
 	if err != nil {
 		panic(err)
 	}
 	// new test database
 	// language=MySQL
 	{
-		mustExec(db, "DROP DATABASE IF EXISTS ElasticJury_test")
-		mustExec(db, "CREATE DATABASE ElasticJury_test DEFAULT CHARACTER SET utf8")
-		mustExec(db, "USE ElasticJury_test")
+		db.mustExec("DROP DATABASE IF EXISTS ElasticJury_test")
+		db.mustExec("CREATE DATABASE ElasticJury_test DEFAULT CHARACTER SET utf8")
+		db.mustExec("USE ElasticJury_test")
 	}
-	mustExecScriptFile(db, path.Join("../", initTableScriptPath))
-	mustExecScriptFile(db, path.Join("../", initTestDataScriptPath))
+	db.mustExecScriptFile(path.Join("../", initTableScriptPath))
+	db.mustExecScriptFile(path.Join("../", initTestDataScriptPath))
 	return db
 }
 
-func epilogue(db *sql.DB) {
-	mustExec(db, "DROP DATABASE ElasticJury_test")
+func epilogue(db database) {
+	db.mustExec("DROP DATABASE ElasticJury_test")
 	if err := db.Close(); err != nil {
 		panic(err)
 	}
