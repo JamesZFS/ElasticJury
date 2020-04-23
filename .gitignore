@@ -8,4 +8,7 @@
 .idea
 .vscode
 
+# Large dataset
+dataset
+
 *.http
