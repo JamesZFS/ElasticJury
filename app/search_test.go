@@ -1,14 +1,13 @@
 package app
 
 import (
-	"path"
 	"reflect"
 	"testing"
 )
 
 func Test_searchCaseIdsByWord(t *testing.T) {
-	db := prologue()
-	defer epilogue(db)
+	db := dbPrologue()
+	defer dbEpilogue(db)
 	type args struct {
 		words []string
 		mode  bool
@@ -104,8 +103,8 @@ func Test_searchCaseIdsByWord(t *testing.T) {
 }
 
 func Test_searchCaseIdsByTag(t *testing.T) {
-	db := prologue()
-	defer epilogue(db)
+	db := dbPrologue()
+	defer dbEpilogue(db)
 	type args struct {
 		tags []string
 		mode bool
@@ -280,7 +279,7 @@ func Test_mergeSearchResult(t *testing.T) {
 	}
 }
 
-func prologue() database {
+func dbPrologue() database {
 	db, err := newDatabase()
 	if err != nil {
 		panic(err)
@@ -292,12 +291,12 @@ func prologue() database {
 		db.mustExec("CREATE DATABASE ElasticJury_test DEFAULT CHARACTER SET utf8")
 		db.mustExec("USE ElasticJury_test")
 	}
-	db.mustExecScriptFile(path.Join("../", initTableScriptPath))
-	db.mustExecScriptFile(path.Join("../", initTestDataScriptPath))
+	db.mustExecScriptFile(initTableScriptPath)
+	db.mustExecScriptFile(initTestDataScriptPath)
 	return db
 }
 
-func epilogue(db database) {
+func dbEpilogue(db database) {
 	db.mustExec("DROP DATABASE ElasticJury_test")
 	if err := db.Close(); err != nil {
 		panic(err)
