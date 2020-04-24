@@ -1,82 +1,44 @@
 # -*- coding: UTF-8 -*-
 
 import argparse
+import json
 import os
-import xml.etree.ElementTree as ElementTree
 
-'''
-格式（全部字段均为 Optional，标记 * 符号的为原型数据库需要）
-- 案件类别
-- QW 全文（*detail/*title字段）
-    - WS 文首
-    - DSR 当事人
-    - SSJL 诉讼记录
-    - AJJBQK 案件基本情况
-    - CPFXGC 裁判分析过程
-    - PJJC 判决结果
-    - WW 文尾
-        - ...
-        - CUS_FGCY 法官成员
-            - FGRYXM 法官人员姓名（*judge字段）
-    - LARQ 立案日期
-    - WSSFMH 文书是否模糊
-    - CUS_SJX 时间线
-    - CUS_FJD 附加段
-    - CUS_CPWS_CPFXGC 裁判分析过程
-    - CUS_CPWS_YGSCD 原告诉称段
-    - CUS...
-    - FT 法条（*law字段）
-'''
-
-walk_rules = [
-    # tag   field   only
-    ('QW', 'value', True),
-    ('FT', 'value', False)
-]
-
-
-class RuleNotCompatibleError(Exception):
-    def __init__(self, key, value):
-        self.message = 'Parsing error (key={}, value={})'.format(key, value)
-
+import mapping_collector
+import processor
 
 parser = argparse.ArgumentParser(description='ElasticJury Data Preprocessor')
 parser.add_argument('--path', type=str, default='demo', help='Relative path for data to process')
+parser.add_argument('--db', type=str, default='sql.db', help='Relative path for SQL database file')
+parser.add_argument('--mapping', type=str, default='mapping.json', help='Tag to nameCN mapping file path')
+parser.add_argument('--no-db', dest='do_db', action='store_false', help='Whether run database processing')
+parser.add_argument('--no-mapping', dest='do_mapping', action='store_false', help='Whether run mapping')
+parser.add_argument('--clean-mapping', dest='clean_mapping', action='store_true', help='Clean the mapping file')
+parser.set_defaults(do_db=True, do_mapping=True, clean_mapping=False)
 
 
-def add_value(element_map, key, value, only):
-    if only and key in element_map:
-        raise RuleNotCompatibleError(key, value)
-    if only:
-        element_map[key] = value
-    else:
-        if key not in element_map:
-            element_map[key] = []
-        element_map[key].append(value)
+def run(path, db_path, mapping_path, do_db, do_mapping, clean_mapping):
+    # Clean mapping
+    if os.path.exists(mapping_path) and clean_mapping:
+        os.remove(mapping_path)
 
+    # Create mapping if not exists
+    if (not os.path.exists(mapping_path)) and do_mapping:
+        mapping = mapping_collector.get_mapping(path)
+        mapping_collector.dump(mapping, mapping_path)
 
-def walk(node, element_map):
-    for tag, field, only in walk_rules:
-        if tag == node.tag:
-            add_value(element_map, tag, node.attrib[field], only)
-    for child in node:
-        walk(child, element_map)
+    # Read mapping
+    if not os.path.exists(mapping_path):
+        print('Mapping file {} does not exist'.format(mapping_path))
+        exit(1)
+    with open(mapping_path, 'r') as file:
+        mapping = json.load(file)
 
-
-def process(path):
-    print('Processing {}'.format(path))
-    element_map = {}
-    tree = ElementTree.parse(path)
-    walk(tree.getroot(), element_map)
-    print(element_map)
-
-
-def run(path):
-    for home, dirs, files in os.walk(path):
-        for file in files:
-            process(os.path.join(home, file))
+    # Processing
+    if do_db:
+        processor.process(mapping, path, db_path)
 
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    run(args.path)
+    run(args.path, args.db, args.mapping, args.do_db, args.do_mapping, args.clean_mapping)
