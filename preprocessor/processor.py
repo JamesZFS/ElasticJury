@@ -2,6 +2,7 @@
 
 import os
 import xml.etree.ElementTree as ElementTree
+import utility
 
 '''
 格式（全部字段均为 Optional，标记 * 符号的为原型数据库需要）
@@ -39,7 +40,14 @@ skip_tags = [
     'writ',  # 文章开始
     'FT',  # 法条
     'FTRY',  # 法条冗余
-    'CASEID', # ID
+    'CASEID',  # ID
+]
+
+special_mapping = [
+    ('AL', '案例'),
+    ('XZQH_P', '行政区划(省)'),
+    ('title', '标题'),
+    ('SFSS', '是否上诉'),  # 我猜测的，大量 xml 存在这个标签
 ]
 
 
@@ -51,12 +59,12 @@ class RuleNotCompatibleError(Exception):
         self.message = 'Parsing error (key={}, value={})'.format(key, value)
 
 
-class TagNotFoundError(Exception):
+class TagMatchError(Exception):
     count = 0  # Static error counter
 
-    def __init__(self, tag):
-        TagNotFoundError.count += 1
-        self.message = 'Tag {} not found'.format(tag)
+    def __init__(self, tag, mapping, path):
+        TagMatchError.count += 1
+        self.message = 'Tag {} not found or multiply (mapping[\'{}\']={}, file={})'.format(tag, tag, mapping, path)
 
 
 def add_value(element_map, key, value, only):
@@ -70,33 +78,41 @@ def add_value(element_map, key, value, only):
         element_map[key].append(value)
 
 
-def attrib_filter(mapping, tag, attrib):
+# Cases
+#   1. Has nameCN -> ['key'] = nameCN
+#   2. Does not have nameCN -> Find mapping
+#       2.1 Not found or multiply -> ['key'] = ''
+#       2.2 Only -> ['key'] = mapping[tag]
+def attrib_filter(mapping, tag, attrib, path):
     if tag in skip_tags:
         return {}
 
-    new_attrib = {}
-    if (tag in mapping) and ('value' in attrib):
-        new_attrib['value'] = attrib['value']
-    elif tag not in mapping:
-        raise TagNotFoundError(tag)
+    new_attrib = {'value': attrib['value'] if 'value' in attrib else ''}
+    if 'nameCN' in attrib:
+        new_attrib['key'] = attrib['nameCN']
+    else:
+        if (tag not in mapping) or ((tag in mapping) and len(mapping[tag])) > 1:
+            raise TagMatchError(tag, mapping[tag] if tag in mapping else '{}', path)
+        else:
+            new_attrib['key'] = mapping[tag][0]
     return new_attrib
 
 
-def walk(node, mapping, element_map, builder):
+def walk(node, mapping, element_map, builder, path):
     for tag, field, only in walk_rules:
         if tag == node.tag:
             add_value(element_map, tag, node.attrib[field], only)
 
     tag = node.tag
     try:
-        attrib = attrib_filter(mapping, tag, node.attrib)
-    except TagNotFoundError as error:
+        attrib = attrib_filter(mapping, tag, node.attrib, path)
+    except TagMatchError as error:
         attrib = {}
         print('>', error.message)
 
     builder.start(node.tag, attrib)
     for child in node:
-        walk(child, mapping, element_map, builder)
+        walk(child, mapping, element_map, builder, path)
     builder.end(tag)
 
 
@@ -105,7 +121,7 @@ def analyze(mapping, path):
     builder = ElementTree.TreeBuilder()
     tree = ElementTree.parse(path)
 
-    walk(tree.getroot(), mapping, element_map, builder)
+    walk(tree.getroot(), mapping, element_map, builder, path)
 
     element_map['tree'] = ElementTree.tostring(builder.close())
 
@@ -113,10 +129,19 @@ def analyze(mapping, path):
 def process(mapping, path, db_path):
     print('[Processor] Processing {} ...'.format(path), flush=True)
 
-    for home, dirs, files in os.walk(path):
-        for file in files:
-            if file.endswith('.xml'):
-                analyze(mapping, os.path.join(home, file))
+    for key, value in special_mapping:
+        mapping[key] = [value]
 
-    print('[Processor] Done! ({} bad rules and {} tags not found)'
-          .format(RuleNotCompatibleError.count, TagNotFoundError.count))
+    all_xmls = utility.get_all_xml_files(path)
+    total = len(all_xmls)
+    print('[Processor] {} xmls to process'.format(total), flush=True)
+
+    step = current = 0.05
+    for index, file in enumerate(all_xmls):
+        analyze(mapping, file)
+        if (index + 1) / total >= current:
+            print('[Processor] {:.0f}% completed'.format(current * 100), flush=True)
+            current += step
+
+    print('[Processor] Done! ({} bad rules and {} tag match errors)'
+          .format(RuleNotCompatibleError.count, TagMatchError.count))
