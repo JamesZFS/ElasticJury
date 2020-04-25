@@ -41,6 +41,8 @@ skip_tags = [
     'FT',  # 法条
     'FTRY',  # 法条冗余
     'CASEID',  # ID
+    'SFXZ',  # 司法行政（只有 8 条涉及到了这个，根本没用的信息）
+    'TAG',  # 司法行政的 TAG
 ]
 
 special_mapping = [
@@ -49,6 +51,8 @@ special_mapping = [
     ('title', '标题'),
     ('SFSS', '是否上诉'),  # 我猜测的，大量 xml 存在这个标签
 ]
+
+parsing_error_count = 0
 
 
 class RuleNotCompatibleError(Exception):
@@ -116,14 +120,46 @@ def walk(node, mapping, element_map, builder, path):
     builder.end(tag)
 
 
+def mark_empty(node):
+    empty = (len(node.attrib) < 2)
+    for child in node:
+        mark_empty(child)
+        if not child.attrib['empty']:
+            empty = False
+    node.attrib['empty'] = empty
+
+
+def rebuild(node, builder):
+    if node.attrib['empty']:
+        return
+
+    attrib = node.attrib.copy()
+    attrib.pop('empty')
+    builder.start(node.tag, attrib)
+    for child in node:
+        rebuild(child, builder)
+    builder.end(node.tag)
+
+
 def analyze(mapping, path):
-    element_map = {}
-    builder = ElementTree.TreeBuilder()
-    tree = ElementTree.parse(path)
+    try:
+        element_map = {}
+        builder = ElementTree.TreeBuilder()
+        tree = ElementTree.parse(path)
 
-    walk(tree.getroot(), mapping, element_map, builder, path)
+        walk(tree.getroot(), mapping, element_map, builder, path)
 
-    element_map['tree'] = ElementTree.tostring(builder.close())
+        # Filter for useless nodes
+        top = builder.close()
+        mark_empty(top)
+        builder = ElementTree.TreeBuilder()
+        rebuild(top, builder)
+
+        element_map['tree'] = ElementTree.tostring(builder.close())
+    except ElementTree.ParseError as error:
+        global parsing_error_count
+        parsing_error_count += 1
+        print('Parsing error in {}: {}'.format(path, error))
 
 
 def process(mapping, path, db_path):
@@ -143,5 +179,6 @@ def process(mapping, path, db_path):
             print('[Processor] {:.0f}% completed'.format(current * 100), flush=True)
             current += step
 
-    print('[Processor] Done! ({} bad rules and {} tag match errors)'
-          .format(RuleNotCompatibleError.count, TagMatchError.count))
+    global parsing_error_count
+    print('[Processor] Done! ({} parsing error, {} bad rules and {} tag match errors)'
+          .format(parsing_error_count, RuleNotCompatibleError.count, TagMatchError.count))
