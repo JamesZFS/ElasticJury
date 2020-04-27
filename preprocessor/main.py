@@ -34,7 +34,7 @@ def run(path, db_path, mapping_path, do_db, do_mapping, clean_mapping):
     with open(mapping_path, 'r') as file:
         mapping = json.load(file)
 
-    # Processing
+    # Processing and dump into database
     if do_db:
         processor.process(mapping, path, db_path)
 
