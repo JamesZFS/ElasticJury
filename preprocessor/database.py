@@ -1,6 +1,8 @@
 import MySQLdb
 import entries
 
+from utility import *
+
 
 class MySQLWrapper:
     db_host = 'localhost'
@@ -10,13 +12,14 @@ class MySQLWrapper:
     def __init__(self, drop=True):
         # Connection will not include password
         # Please manually add user/password or set your MySQL root settings to login without password
+        log_info('Database', 'Connecting to MySQL database ...')
         self.connection = MySQLdb.connect(self.db_host)
         self.commands_not_committed = 0
         if drop:
             self.drop()
         self.create_and_switch()
         self.execute_script(self.db_init_table_script)
-        print('SQL database initialized')
+        log_info('Database', 'MySQL database initialized')
 
     def drop(self):
         self.execute('DROP DATABASE IF EXISTS ElasticJury')
@@ -46,7 +49,9 @@ class MySQLWrapper:
                 self.execute(command)
 
     def insert(self, entry: entries.MySQLEntry):
-        self.execute(entry.generate_insert_command())
+        command, values = entry.generate_insert_command()
+        self.execute(command, values)
+        return self.connection.insert_id()
 
 
 if __name__ == '__main__':

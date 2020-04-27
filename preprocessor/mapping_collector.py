@@ -1,7 +1,7 @@
 import json
 import xml.etree.ElementTree as ElementTree
-import utility
 
+from utility import *
 
 parsing_error_count = 0
 
@@ -22,19 +22,12 @@ def add_mapping(tag, attrib, path, mapping):
         if key not in mapping[tag]:
             mapping[tag].append(key)
 
-        # One-to-one mapping
-        # if tag in mapping:
-        #     if mapping[tag] != key:
-        #         raise ConflictMappingError(path, tag, mapping[tag], key)
-        # else:
-        #     mapping[tag] = key
-
 
 def walk(node, path, mapping):
     try:
         add_mapping(node.tag, node.attrib, path, mapping)
     except ConflictMappingError as error:
-        print('>', error.message)
+        log_info('Error', error.message)
 
     for child in node:
         walk(child, path, mapping)
@@ -47,32 +40,32 @@ def process_mapping(path, mapping):
     except ElementTree.ParseError as error:
         global parsing_error_count
         parsing_error_count += 1
-        print('Parsing error in {}: {}'.format(path, error))
+        log_info('Error', 'Parsing error in {}: {}'.format(path, error))
 
 
 def get_mapping(path):
-    print('[Mapping] Processing mapping in {} ... '.format(path), flush=True)
+    log_info('Mapping', 'Processing mapping in {} ... '.format(path))
     mapping = {}
 
-    all_xmls = utility.get_all_xml_files(path)
+    all_xmls = get_all_xml_files(path)
     total = len(all_xmls)
-    print('[Mapping] {} xmls to process'.format(total), flush=True)
+    log_info('Mapping', '{} xmls to process'.format(total))
 
     step = current = 0.05
     for index, file in enumerate(all_xmls):
         process_mapping(file, mapping)
         if (index + 1) / total >= current:
-            print('[Mapping] {:.0f}% completed'.format(current * 100), flush=True)
+            log_info('Mapping', '{:.0f}% completed'.format(current * 100))
             current += step
 
     global parsing_error_count
-    print('[Mapping] Done! ({} parsing error)'.format(parsing_error_count), flush=True)
+    log_info('Mapping', 'Done! ({} parsing error)'.format(parsing_error_count))
     return mapping
 
 
 def dump(mapping, mapping_path):
-    print('[Mapping] Dumping mapping to {} ...'.format(mapping_path), flush=True)
+    log_info('Mapping', 'Dumping mapping to {} ...'.format(mapping_path))
     string = json.dumps(mapping)
     with open(mapping_path, 'w') as file:
         file.write(string)
-    print('[Mapping] Done!', flush=True)
+    log_info('Mapping', 'Done')

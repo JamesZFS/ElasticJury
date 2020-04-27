@@ -1,8 +1,9 @@
 # -*- coding: UTF-8 -*-
 
-import os
 import xml.etree.ElementTree as ElementTree
-import utility
+
+from utility import *
+from database import MySQLWrapper
 
 '''
 格式（全部字段均为 Optional，标记 * 符号的为原型数据库需要）
@@ -159,26 +160,28 @@ def analyze(mapping, path):
     except ElementTree.ParseError as error:
         global parsing_error_count
         parsing_error_count += 1
-        print('Parsing error in {}: {}'.format(path, error))
+        log_info('Error', 'Parsing error in {}: {}'.format(path, error))
 
 
-def process(mapping, path, db_path):
-    print('[Processor] Processing {} ...'.format(path), flush=True)
+def process(mapping, path):
+    log_info('Processor', 'Processing {} ...'.format(path))
 
     for key, value in special_mapping:
         mapping[key] = [value]
 
-    all_xmls = utility.get_all_xml_files(path)
+    all_xmls = get_all_xml_files(path)
     total = len(all_xmls)
-    print('[Processor] {} xmls to process'.format(total), flush=True)
+    log_info('Processor', '{} xmls to process'.format(total))
+
+    database = MySQLWrapper(drop=True)
 
     step = current = 0.05
     for index, file in enumerate(all_xmls):
         analyze(mapping, file)
         if (index + 1) / total >= current:
-            print('[Processor] {:.0f}% completed'.format(current * 100), flush=True)
+            log_info('Processor', '{:.0f}% completed'.format(current * 100))
             current += step
 
     global parsing_error_count
-    print('[Processor] Done! ({} parsing error, {} bad rules and {} tag match errors)'
-          .format(parsing_error_count, RuleNotCompatibleError.count, TagMatchError.count))
+    log_info('Processor', '({} parsing error, {} bad rules and {} tag match errors)'
+             .format(parsing_error_count, RuleNotCompatibleError.count, TagMatchError.count))
