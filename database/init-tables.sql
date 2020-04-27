@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS Cases # 案件数据库
     `law`    TEXT         NULL,     # 法律，考虑到一对多关系，倒排索引需单独建表
     `tag`    TEXT         NULL,     # 标签/关键词，考虑到一对多关系，倒排索引需单独建表
     `link`   TEXT         NULL,     # 原网页链接
-    `detail` LONGTEXT     NOT NULL, # 案情
+    `detail` LONGTEXT     NOT NULL, # 案情（xml 中的全文部分）
+    `tree`	 LONGTEXT	  NOT NULL, # xml 的树形结构
     PRIMARY KEY (`id` ASC)
 ) CHAR SET utf8;
 CREATE TABLE IF NOT EXISTS WordIndex # 词倒排索引数据库（一对多）, word -> [](case, weight)

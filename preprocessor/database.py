@@ -1,4 +1,5 @@
 import MySQLdb
+import entries
 
 
 class MySQLWrapper:
@@ -43,6 +44,9 @@ class MySQLWrapper:
             commands = filter(lambda x: len(x) > 0, commands)
             for command in commands:
                 self.execute(command)
+
+    def insert(self, entry: entries.MySQLEntry):
+        self.execute(entry.generate_insert_command())
 
 
 if __name__ == '__main__':
