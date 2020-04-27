@@ -1,9 +1,12 @@
 # -*- coding: UTF-8 -*-
 
+import jieba
+import jieba.analyse
 import xml.etree.ElementTree as ElementTree
 
-from utility import *
 from database import MySQLWrapper
+from entries import *
+from utility import *
 
 '''
 格式（全部字段均为 Optional，标记 * 符号的为原型数据库需要）
@@ -72,15 +75,15 @@ class TagMatchError(Exception):
         self.message = 'Tag {} not found or multiply (mapping[\'{}\']={}, file={})'.format(tag, tag, mapping, path)
 
 
-def add_value(element_map, key, value, only):
-    if only and key in element_map:
+def add_value(entry, key, value, only):
+    if only and key in entry:
         raise RuleNotCompatibleError(key, value)
     if only:
-        element_map[key] = value
+        entry[key] = value
     else:
-        if key not in element_map:
-            element_map[key] = []
-        element_map[key].append(value)
+        if key not in entry:
+            entry[key] = []
+        entry[key].append(value)
 
 
 # Cases
@@ -103,10 +106,10 @@ def attrib_filter(mapping, tag, attrib, path):
     return new_attrib
 
 
-def walk(node, mapping, element_map, builder, path):
+def walk(node, mapping, entry, builder, path):
     for tag, field, only in walk_rules:
         if tag == node.tag:
-            add_value(element_map, tag, node.attrib[field], only)
+            add_value(entry, tag, node.attrib[field], only)
 
     tag = node.tag
     try:
@@ -117,7 +120,7 @@ def walk(node, mapping, element_map, builder, path):
 
     builder.start(node.tag, attrib)
     for child in node:
-        walk(child, mapping, element_map, builder, path)
+        walk(child, mapping, entry, builder, path)
     builder.end(tag)
 
 
@@ -143,12 +146,12 @@ def rebuild(node, builder):
 
 
 def analyze(mapping, path):
+    entry = {}
     try:
-        element_map = {}
         builder = ElementTree.TreeBuilder()
         tree = ElementTree.parse(path)
 
-        walk(tree.getroot(), mapping, element_map, builder, path)
+        walk(tree.getroot(), mapping, entry, builder, path)
 
         # Filter for useless nodes
         top = builder.close()
@@ -156,14 +159,42 @@ def analyze(mapping, path):
         builder = ElementTree.TreeBuilder()
         rebuild(top, builder)
 
-        element_map['tree'] = ElementTree.tostring(builder.close())
+        entry['tree'] = ElementTree.tostring(builder.close())
     except ElementTree.ParseError as error:
         global parsing_error_count
         parsing_error_count += 1
         log_info('Error', 'Parsing error in {}: {}'.format(path, error))
+    return entry
+
+
+def insert_into_database(database, entry):
+    if len(entry) == 0:
+        return
+
+    judges = entry.get('FGRYXM', [])
+    detail = entry.get('QW', '')
+    tree = entry.get('tree', '')
+    laws = entry.get('FT', [])
+    tags_with_weights = jieba.analyse.textrank(detail, topK=5, withWeight=True)
+    tags = [tag for tag, _ in tags_with_weights]
+    words = jieba.lcut_for_search(detail)
+
+    # Insert case
+    case = CaseEntry(judges, laws, tags, detail, tree)
+    case_id = database.insert(case)
+
+    # Insert words/judges/laws/tags index
+    entries = []
+    for tag, weight in tags_with_weights:
+        entry = IndexEntry('TagIndex', 'tag', tag, case_id, weight)
+        entries.append(entry)
+
+    database.insert_many(entries)
 
 
 def process(mapping, path):
+    log_info('Jieba', 'Initializing jieba ...')
+    jieba.initialize()
     log_info('Processor', 'Processing {} ...'.format(path))
 
     for key, value in special_mapping:
@@ -177,7 +208,8 @@ def process(mapping, path):
 
     step = current = 0.05
     for index, file in enumerate(all_xmls):
-        analyze(mapping, file)
+        entry = analyze(mapping, file)
+        insert_into_database(database, entry)
         if (index + 1) / total >= current:
             log_info('Processor', '{:.0f}% completed'.format(current * 100))
             current += step
@@ -185,3 +217,4 @@ def process(mapping, path):
     global parsing_error_count
     log_info('Processor', '({} parsing error, {} bad rules and {} tag match errors)'
              .format(parsing_error_count, RuleNotCompatibleError.count, TagMatchError.count))
+    database.close()

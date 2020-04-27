@@ -1,7 +1,6 @@
 CREATE TABLE IF NOT EXISTS Cases # 案件数据库
 (
-    `id`     INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `title`  TINYTEXT     NOT NULL, # 标题
+    `id`     INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `judge`  TEXT         NULL,     # 法官，考虑到一对多关系，倒排索引需单独建表
     `law`    TEXT         NULL,     # 法律，考虑到一对多关系，倒排索引需单独建表
     `tag`    TEXT         NULL,     # 标签/关键词，考虑到一对多关系，倒排索引需单独建表

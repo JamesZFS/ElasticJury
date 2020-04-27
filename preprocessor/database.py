@@ -1,6 +1,6 @@
 import MySQLdb
-import entries
 
+from entries import *
 from utility import *
 
 
@@ -22,17 +22,29 @@ class MySQLWrapper:
         log_info('Database', 'MySQL database initialized')
 
     def drop(self):
+        log_info('Database', 'Dropping original database ...')
         self.execute('DROP DATABASE IF EXISTS ElasticJury')
 
     def create_and_switch(self):
         self.execute('CREATE DATABASE IF NOT EXISTS ElasticJury DEFAULT CHARACTER SET utf8')
         self.execute('USE ElasticJury')
 
-    def execute(self, command, commit=False):
+    def execute(self, command, values=None, commit=False):
+        # log_info('Database', 'Executing {}'.format(command))
         cursor = self.connection.cursor()
-        cursor.execute(command)
-        cursor.close()
-        if commit or (self.commands_not_committed % self.freq_commit == 0):
+        if values:
+            cursor.execute(command, values)
+        else:
+            cursor.execute(command)
+        self.commands_not_committed += 1
+        if commit or self.commands_not_committed > self.freq_commit == 0:
+            self.commit()
+
+    def execute_many(self, commands, values, commit=False):
+        cursor = self.connection.cursor()
+        cursor.executemany(commands, values)
+        self.commands_not_committed += len(commands)
+        if commit or self.commands_not_committed > self.freq_commit == 0:
             self.commit()
 
     def commit(self):
@@ -48,10 +60,23 @@ class MySQLWrapper:
             for command in commands:
                 self.execute(command)
 
-    def insert(self, entry: entries.MySQLEntry):
+    def insert(self, entry: MySQLEntry):
         command, values = entry.generate_insert_command()
         self.execute(command, values)
         return self.connection.insert_id()
+
+    def insert_many(self, entries: [MySQLEntry]):
+        commands, values = [], []
+        for entry in entries:
+            command, value = entry.generate_insert_command()
+            commands.append(command)
+            values.append(value)
+        self.execute_many(commands, values)
+
+    def close(self):
+        self.commit()
+        self.connection.close()
+        log_info('Database', 'MySQL Database closed')
 
 
 if __name__ == '__main__':
