@@ -18,9 +18,9 @@ class CaseEntry(MySQLEntry):
 
     def generate_insert_command(self):
         # Field id will automatically increase
-        command = 'INSERT INTO Cases(judge, law, tag, detail) VALUES (%s,%s,%s,%s)'
+        command = 'INSERT INTO Cases(judge, law, tag, detail, tree) VALUES (%s,%s,%s,%s,%s)'
         values = (self.separator.join(self.judges), self.separator.join(self.laws),
-                  self.separator.join(self.tags), self.detail)
+                  self.separator.join(self.tags), self.detail, self.tree)
         return command, values
 
 

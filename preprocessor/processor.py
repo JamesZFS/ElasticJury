@@ -2,6 +2,7 @@
 
 import jieba
 import jieba.analyse
+import re
 import xml.etree.ElementTree as ElementTree
 
 from database import MySQLWrapper
@@ -34,10 +35,17 @@ from utility import *
 
 # Some fixed rules
 walk_rules = [
-    # tag, field, only
-    ('QW', 'value', True),
-    ('FT', 'value', False),
-    ('FGRYXM', 'value', False),
+    # tag, field, only, used in tag_field
+    ('QW', 'value', True, False),  # 全文
+    ('FT', 'value', False, False),  # 法条
+    ('FGRYXM', 'value', False, False),  # 法官人员姓名
+    ('AJLB', 'value', False, True),  # 案件类别
+    ('AJSJ', 'value', False, True),  # 案件涉及
+    ('WSMC', 'value', False, True),  # 文书名称
+    ('SPCX', 'value', False, True),  # 审判程序
+    ('AY', 'value', False, True),  # 案由
+    ('SJLY_AY', 'value', False, True),  # 涉及领域_案由
+    ('WZAY', 'value', False, True),  # 完整案由
 ]
 
 skip_tags = [
@@ -107,8 +115,8 @@ def attrib_filter(mapping, tag, attrib, path):
 
 
 def walk(node, mapping, entry, builder, path):
-    for tag, field, only in walk_rules:
-        if tag == node.tag:
+    for tag, field, only, _ in walk_rules:
+        if tag == node.tag and field in node.attrib:
             add_value(entry, tag, node.attrib[field], only)
 
     tag = node.tag
@@ -167,29 +175,83 @@ def analyze(mapping, path):
     return entry
 
 
+def reduce_count_weights(items):
+    counter = {}
+    total = len(items)
+    for item in items:
+        value = counter.get(item, 0)
+        counter[item] = value + 1
+    return [(k, v / total) for k, v in counter.items()]
+
+
+def collect_entries(items_with_weights, table_name, key_name, case_id):
+    entries = []
+    for item, weight in items_with_weights:
+        entry = IndexEntry(table_name, key_name, item, case_id, weight)
+        entries.append(entry)
+    return entries
+
+
+law_pattern = re.compile('《.+》')
+
+
+def reduce_laws(laws):
+    detailed_reduce = reduce_count_weights(laws)
+    reduced = {}
+    for key, value in detailed_reduce:
+        law = law_pattern.findall(key)
+        if len(law) == 1:
+            law = law[0]
+            reduced[law] = value + reduced.get(law, 0)
+        else:
+            log_info('Debug', 'Failed to parse law {}'.format(law))
+        reduced[key] = value + reduced.get(key, 0)
+    return [(k, v) for k, v in reduced.items()]
+
+
 def insert_into_database(database, entry):
     if len(entry) == 0:
         return
 
-    judges = entry.get('FGRYXM', [])
     detail = entry.get('QW', '')
     tree = entry.get('tree', '')
-    laws = entry.get('FT', [])
-    tags_with_weights = jieba.analyse.textrank(detail, topK=5, withWeight=True)
-    tags = [tag for tag, _ in tags_with_weights]
-    words = jieba.lcut_for_search(detail)
+
+    xml_tags = []
+    for tag, _, only, used_in_tag in walk_rules:
+        if used_in_tag:
+            assert not only
+            for to_split in entry.get(tag, []):
+                xml_tags.extend(filter(lambda x: len(x) > 0, re.split(' |、', to_split)))
+    xml_tags = list(set(xml_tags))
+
+    # TODO: change to better calculating method later
+    arrays = [
+        (reduce_count_weights(jieba.lcut(detail)), 'WordIndex', 'word'),
+        (reduce_count_weights(entry.get('FGRYXM', [])), 'JudgeIndex', 'judge'),
+        (reduce_laws(entry.get('FT', [])), 'LawIndex', 'law'),
+        # AllowPos 是词性位置
+        (jieba.analyse.textrank(detail, topK=5, withWeight=True, allowPOS=('n', 'v')), 'TagIndex', 'tag')
+    ]
 
     # Insert case
-    case = CaseEntry(judges, laws, tags, detail, tree)
+    extract = lambda x, i: [item[0] for item in x[i][0]]
+    case = CaseEntry(extract(arrays, 1), extract(arrays, 2), extract(arrays, 3), detail, tree)
     case_id = database.insert(case)
 
-    # Insert words/judges/laws/tags index
-    entries = []
-    for tag, weight in tags_with_weights:
-        entry = IndexEntry('TagIndex', 'tag', tag, case_id, weight)
-        entries.append(entry)
+    # Insert index
+    for array in arrays:
+        entries = collect_entries(array[0], array[1], array[2], case_id)
+        database.insert_many(entries)
 
-    database.insert_many(entries)
+    log_info('ShowCase', '')
+    # log_info('ShowCase', 'case_id={}'.format(case_id))
+    # log_info('ShowCase', 'detail={}'.format(detail))
+    # log_info('ShowCase', 'tree={}'.format(tree))
+    # log_info('ShowCase', 'words={}'.format(arrays[0][0]))
+    # log_info('ShowCase', 'judges={}'.format(arrays[1][0]))
+    # log_info('ShowCase', 'laws={}'.format(arrays[2][0]))
+    log_info('ShowCase', 'tags={}'.format(arrays[3][0]))
+    log_info('ShowCase', 'xml_tags={}'.format(xml_tags))
 
 
 def process(mapping, path):

@@ -40,10 +40,10 @@ class MySQLWrapper:
         if commit or self.commands_not_committed > self.freq_commit == 0:
             self.commit()
 
-    def execute_many(self, commands, values, commit=False):
+    def execute_many(self, command, values, commit=False):
         cursor = self.connection.cursor()
-        cursor.executemany(commands, values)
-        self.commands_not_committed += len(commands)
+        cursor.executemany(command, values)
+        self.commands_not_committed += len(values)
         if commit or self.commands_not_committed > self.freq_commit == 0:
             self.commit()
 
@@ -66,12 +66,16 @@ class MySQLWrapper:
         return self.connection.insert_id()
 
     def insert_many(self, entries: [MySQLEntry]):
-        commands, values = [], []
+        if len(entries) == 0:
+            return
+
+        command, _ = entries[0].generate_insert_command()
+        values = []
         for entry in entries:
-            command, value = entry.generate_insert_command()
-            commands.append(command)
+            entry_command, value = entry.generate_insert_command()
+            assert entry_command == command
             values.append(value)
-        self.execute_many(commands, values)
+        self.execute_many(command, values)
 
     def close(self):
         self.commit()
