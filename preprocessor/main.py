@@ -9,7 +9,7 @@ import processor
 from utility import *
 
 parser = argparse.ArgumentParser(description='ElasticJury Data Preprocessor')
-parser.add_argument('--path', type=str, default='demo', help='Relative path for data to process')
+parser.add_argument('--path', type=str, default='../dataset/xml_1', help='Relative path for data to process')
 parser.add_argument('--mapping', type=str, default='mapping.json', help='Tag to nameCN mapping file path')
 parser.add_argument('--no-db', dest='do_db', action='store_false', help='Whether run database processing')
 parser.add_argument('--no-mapping', dest='do_mapping', action='store_false', help='Whether run mapping')

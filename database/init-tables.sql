@@ -1,11 +1,12 @@
 CREATE TABLE IF NOT EXISTS Cases # 案件数据库
 (
-    `id`     INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `judge`  TEXT         NULL,     # 法官，考虑到一对多关系，倒排索引需单独建表
-    `law`    TEXT         NULL,     # 法律，考虑到一对多关系，倒排索引需单独建表
-    `tag`    TEXT         NULL,     # 标签/关键词，考虑到一对多关系，倒排索引需单独建表
-    `detail` LONGTEXT     NOT NULL, # 案情（xml 中的全文部分）
-    `tree`	 LONGTEXT	  NOT NULL, # xml 的树形结构
+    `id`        INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `judges`    TEXT         NULL,     # 法官，考虑到一对多关系，倒排索引需单独建表
+    `laws`      TEXT         NULL,     # 法律，考虑到一对多关系，倒排索引需单独建表
+    `tags`      TEXT         NULL,     # 标签，考虑到一对多关系，倒排索引需单独建表
+    `keywords`  TEXT         NULL,     # 关键词
+    `detail`    LONGTEXT     NOT NULL, # 案情（xml 中的全文部分）
+    `tree`	    LONGTEXT	  NOT NULL, # xml 的树形结构
     PRIMARY KEY (`id` ASC)
 ) CHAR SET utf8;
 CREATE TABLE IF NOT EXISTS WordIndex # 词倒排索引数据库（一对多）, word -> [](case, weight)

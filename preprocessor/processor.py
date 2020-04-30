@@ -40,6 +40,7 @@ walk_rules = [
     ('FT', 'value', False, False),  # 法条
     ('FGRYXM', 'value', False, False),  # 法官人员姓名
     ('AJLB', 'value', False, True),  # 案件类别
+    ('AJLX', 'value', False, True),  # 案件类型
     ('AJSJ', 'value', False, True),  # 案件涉及
     ('WSMC', 'value', False, True),  # 文书名称
     ('SPCX', 'value', False, True),  # 审判程序
@@ -167,7 +168,8 @@ def analyze(mapping, path):
         builder = ElementTree.TreeBuilder()
         rebuild(top, builder)
 
-        entry['tree'] = ElementTree.tostring(builder.close())
+        top = builder.close()
+        entry['tree'] = ElementTree.tostring(top, encoding='unicode')
     except ElementTree.ParseError as error:
         global parsing_error_count
         parsing_error_count += 1
@@ -177,11 +179,12 @@ def analyze(mapping, path):
 
 def reduce_count_weights(items):
     counter = {}
-    total = len(items)
+    max_value = 0
     for item in items:
         value = counter.get(item, 0)
         counter[item] = value + 1
-    return [(k, v / total) for k, v in counter.items()]
+        max_value = max(value + 1, max_value)
+    return [(k, v / max_value) for k, v in counter.items()]
 
 
 def collect_entries(items_with_weights, table_name, key_name, case_id):
@@ -196,17 +199,22 @@ law_pattern = re.compile('《.+》')
 
 
 def reduce_laws(laws):
-    detailed_reduce = reduce_count_weights(laws)
     reduced = {}
-    for key, value in detailed_reduce:
-        law = law_pattern.findall(key)
+    for k, v in reduce_count_weights(laws):
+        law = law_pattern.findall(k)
         if len(law) == 1:
             law = law[0]
-            reduced[law] = value + reduced.get(law, 0)
+            reduced[law] = v + reduced.get(law, 0)
         else:
-            log_info('Debug', 'Failed to parse law {}'.format(law))
-        reduced[key] = value + reduced.get(key, 0)
-    return [(k, v) for k, v in reduced.items()]
+            log_info('Debug', 'Failed to parse law {}'.format(k))
+        reduced[k] = v + reduced.get(k, 0)
+    max_value = 0
+    for k, v in reduced.items():
+        max_value = max(max_value, v)
+    return [(k, v / max_value) for k, v in reduced.items()]
+
+
+stopwords = [line.strip() for line in open('stopwords.txt', 'r', encoding='utf-8').readlines()]
 
 
 def insert_into_database(database, entry):
@@ -215,27 +223,29 @@ def insert_into_database(database, entry):
 
     detail = entry.get('QW', '')
     tree = entry.get('tree', '')
+    keywords = jieba.analyse.textrank(detail, topK=8)
 
     xml_tags = []
     for tag, _, only, used_in_tag in walk_rules:
         if used_in_tag:
             assert not only
             for to_split in entry.get(tag, []):
-                xml_tags.extend(filter(lambda x: len(x) > 0, re.split(' |、', to_split)))
-    xml_tags = list(set(xml_tags))
+                xml_tags.extend(filter(lambda x: len(x) > 0, re.split('[ 、]', to_split)))
+    xml_tags = [(k, 1) for k in set(xml_tags)]
 
     # TODO: change to better calculating method later
     arrays = [
-        (reduce_count_weights(jieba.lcut(detail)), 'WordIndex', 'word'),
+        (reduce_count_weights(filter(lambda w: (w not in stopwords) and (len(w.strip()) > 0), jieba.lcut(detail))),
+         'WordIndex', 'word'),
         (reduce_count_weights(entry.get('FGRYXM', [])), 'JudgeIndex', 'judge'),
         (reduce_laws(entry.get('FT', [])), 'LawIndex', 'law'),
         # AllowPos 是词性位置
-        (jieba.analyse.textrank(detail, topK=5, withWeight=True, allowPOS=('n', 'v')), 'TagIndex', 'tag')
+        (xml_tags, 'TagIndex', 'tag')
     ]
 
     # Insert case
     extract = lambda x, i: [item[0] for item in x[i][0]]
-    case = CaseEntry(extract(arrays, 1), extract(arrays, 2), extract(arrays, 3), detail, tree)
+    case = CaseEntry(extract(arrays, 1), extract(arrays, 2), extract(arrays, 3), keywords, detail, tree)
     case_id = database.insert(case)
 
     # Insert index
@@ -244,14 +254,13 @@ def insert_into_database(database, entry):
         database.insert_many(entries)
 
     log_info('ShowCase', '')
-    # log_info('ShowCase', 'case_id={}'.format(case_id))
-    # log_info('ShowCase', 'detail={}'.format(detail))
-    # log_info('ShowCase', 'tree={}'.format(tree))
-    # log_info('ShowCase', 'words={}'.format(arrays[0][0]))
-    # log_info('ShowCase', 'judges={}'.format(arrays[1][0]))
-    # log_info('ShowCase', 'laws={}'.format(arrays[2][0]))
+    log_info('ShowCase', 'case_id={}'.format(case_id))
+    log_info('ShowCase', 'detail={}'.format(detail))
+    log_info('ShowCase', 'tree={}'.format(tree))
+    log_info('ShowCase', 'words={}'.format(arrays[0][0]))
+    log_info('ShowCase', 'judges={}'.format(arrays[1][0]))
+    log_info('ShowCase', 'laws={}'.format(arrays[2][0]))
     log_info('ShowCase', 'tags={}'.format(arrays[3][0]))
-    log_info('ShowCase', 'xml_tags={}'.format(xml_tags))
 
 
 def process(mapping, path):
