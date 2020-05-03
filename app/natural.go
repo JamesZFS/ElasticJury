@@ -6,7 +6,7 @@ import "strings"
 
 func preprocessWord(word string) string {
 	word = strings.TrimSpace(word)
-	// TODO stem word, remove stop tags and escape
+	// TODO stem word, remove stop words and escape
 	return word
 }
 

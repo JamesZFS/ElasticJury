@@ -1,7 +1,7 @@
-INSERT INTO Cases (id, title, judge, law, tag, link, detail)
-VALUES (1, '某诈骗罪', '张三', '宪法', '诈骗', 'https://www.google.com', '某人诈骗了另一个人。你好，世界。'),
-       (2, '某猥亵罪', '王五', '宪法', '猥亵', 'https://www.google.com', '某人猥亵了另一个人。世界。'),
-       (3, '某诉讼案', '张三', '诉讼法', '猥亵', 'https://www.google.com', '某人猥亵了另一个人。世界。');
+INSERT INTO Cases (id, judges, laws, tags, keywords, detail, tree)
+VALUES (1, '张三', '宪法', '诈骗', 'https://www.google.com', '某人诈骗了另一个人。你好，世界。', 'xxx'),
+       (2, '王五', '宪法', '猥亵', 'https://www.google.com', '某人猥亵了另一个人。世界。', 'yyy'),
+       (3, '张三', '诉讼法', '猥亵', 'https://www.google.com', '某人猥亵了另一个人。世界。', 'zzz');
 INSERT INTO JudgeIndex (judge, caseId, weight)
 VALUES ('张三', 1, 1.0),
        ('张三', 3, 1.0),

@@ -21,8 +21,6 @@ var (
 
 func (db database) makeSearchHandler() gin.HandlerFunc {
 	return func(context *gin.Context) {
-		s := searchResultSet{}
-		s[1] = 1.1
 		// Parse queries:
 		words := PreprocessWords(strings.Split(context.Query("word"), ","))
 		tags := FilterStrs(strings.Split(context.Query("tag"), ","), NotWhiteSpace)
