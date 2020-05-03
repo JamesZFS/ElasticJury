@@ -1,8 +1,10 @@
 package app
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -87,6 +89,45 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		}
 
 		context.JSON(http.StatusOK, result.toResponse())
+	}
+}
+
+func (db database) makeCaseInfoHandler() gin.HandlerFunc {
+	return func(context *gin.Context) {
+		idQuery := context.Query("id")
+		ids := strings.Split(idQuery, ",")
+		for _, id := range ids { // id check
+			if _, err := strconv.ParseInt(id, 10, 64); err != nil {
+				context.String(http.StatusBadRequest, "Bad `id` query \"%id\".", id)
+				return
+			}
+		}
+		rows, err := db.Query(fmt.Sprintf("SELECT id, judges, laws, tags, keywords, detail, tree FROM Cases WHERE id IN (%s) ORDER BY FIELD(id, %s)", idQuery, idQuery))
+		if err != nil {
+			context.Status(http.StatusInternalServerError)
+			panic(err)
+		}
+		result := make([]gin.H, 0, len(ids))
+		for rows.Next() {
+			var (
+				id                                         int
+				judges, laws, tags, keywords, detail, tree string
+			)
+			if err := rows.Scan(&id, &judges, &laws, &tags, &keywords, &detail, &tree); err != nil {
+				context.Status(http.StatusInternalServerError)
+				panic(err)
+			}
+			result = append(result, gin.H{
+				"id":       id,
+				"judges":   judges,
+				"laws":     laws,
+				"tags":     tags,
+				"keywords": keywords,
+				"detail":   detail,
+				"tree":     tree,
+			})
+		}
+		context.JSON(http.StatusOK, result)
 	}
 }
 

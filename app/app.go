@@ -35,9 +35,10 @@ func NewApp() *App {
 		router.GET("/ping", func(context *gin.Context) {
 			context.String(http.StatusOK, "pong")
 		})
-		// Retrieve api:
+		// Retrieve case id by word, tag, law, judge
 		router.GET("/search", db.makeSearchHandler())
-		// Other apis...
+		// Retrieve case info by case id
+		router.GET("/case", db.makeCaseInfoHandler())
 	}
 
 	return &App{
