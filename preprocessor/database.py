@@ -9,11 +9,11 @@ class MySQLWrapper:
     db_init_table_script = '../database/init-tables.sql'
     freq_commit = 50
 
-    def __init__(self, drop=True):
+    def __init__(self, drop=True, password=''):
         # Connection will not include password
         # Please manually add user/password or set your MySQL root settings to login without password
         log_info('Database', 'Connecting to MySQL database ...')
-        self.connection = MySQLdb.connect(self.db_host)
+        self.connection = MySQLdb.connect(self.db_host, password=password)
         self.commands_not_committed = 0
         if drop:
             self.drop()

@@ -214,7 +214,7 @@ def reduce_laws(laws):
     return [(k, v / max_value) for k, v in reduced.items()]
 
 
-stopwords = [line.strip() for line in open('stopwords.txt', 'r', encoding='utf-8').readlines()]
+stopwords = set([line.strip() for line in open('stopwords.txt', 'r', encoding='utf-8').readlines()])
 
 
 def insert_into_database(database, entry):
@@ -263,7 +263,7 @@ def insert_into_database(database, entry):
     log_info('ShowCase', 'tags={}'.format(arrays[3][0]))
 
 
-def process(mapping, path):
+def process(mapping, path, db_password):
     log_info('Jieba', 'Initializing jieba ...')
     jieba.initialize()
     log_info('Processor', 'Processing {} ...'.format(path))
@@ -275,7 +275,7 @@ def process(mapping, path):
     total = len(all_xmls)
     log_info('Processor', '{} xmls to process'.format(total))
 
-    database = MySQLWrapper(drop=True)
+    database = MySQLWrapper(drop=True, password=db_password)
 
     step = current = 0.05
     for index, file in enumerate(all_xmls):

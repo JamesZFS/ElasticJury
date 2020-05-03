@@ -12,7 +12,8 @@ type database struct {
 }
 
 func newDatabase() (database, error) {
-	db, err := sql.Open("mysql", dataSourceName)
+	password := GetEnvVar("PASSWORD", "")
+	db, err := sql.Open("mysql", strings.Replace(dataSourceName, "<password>", password, 1))
 	return database{db}, err
 }
 
