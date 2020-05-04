@@ -8,4 +8,10 @@
 .idea
 .vscode
 
+# Large dataset
+dataset
+
+# Python cache
+__pycache__
+
 *.http

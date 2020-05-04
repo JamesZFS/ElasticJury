@@ -1,30 +1,28 @@
 package app
 
 import (
-	"database/sql"
 	"github.com/gin-gonic/gin"
-	_ "github.com/go-sql-driver/mysql"
 	"net/http"
 )
 
 type App struct {
 	*gin.Engine
-	db *sql.DB
+	db database
 }
 
-/// Return a new app instance
+// Return a new app instance
 func NewApp() *App {
 	// Setup db:
-	db, err := sql.Open("mysql", dataSourceName)
+	db, err := newDatabase()
 	if err != nil {
 		panic(err)
 	}
 	// language=MySQL
 	{
 		// Create and use `ElasticJury`
-		mustExec(db, "CREATE DATABASE IF NOT EXISTS ElasticJury DEFAULT CHARACTER SET utf8")
-		mustExec(db, "USE ElasticJury")
-		mustExecScriptFile(db, initTableScriptPath)
+		db.mustExec("CREATE DATABASE IF NOT EXISTS ElasticJury DEFAULT CHARACTER SET utf8")
+		db.mustExec("USE ElasticJury")
+		db.mustExecScriptFile(initTableScriptPath)
 	}
 	println("Database initialized.")
 
@@ -37,9 +35,10 @@ func NewApp() *App {
 		router.GET("/ping", func(context *gin.Context) {
 			context.String(http.StatusOK, "pong")
 		})
-		// Retrieve api:
-		router.GET("/search", MakeSearchHandler(db))
-		// Other apis...
+		// Retrieve case id by word, tag, law, judge
+		router.GET("/search", db.makeSearchHandler())
+		// Retrieve case info by case id
+		router.GET("/case", db.makeCaseInfoHandler())
 	}
 
 	return &App{

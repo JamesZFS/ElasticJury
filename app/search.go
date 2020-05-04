@@ -1,53 +1,141 @@
 package app
 
 import (
-	"database/sql"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
-//type searchResultItem struct {
-//	caseId int
-//	weight float32
-//}
-
-type searchResultSet map[int]float32 // caseId -> weight
+type (
+	searchResultSet map[int]float32 // caseId -> weight
+)
 
 const (
 	modeAnd = false // Intersect search results, default
 	modeOr  = true  // Union search results
 )
 
-func MakeSearchHandler(db *sql.DB) gin.HandlerFunc {
+var (
+	emptySearchResponse = searchResultSet{}.toResponse()
+)
+
+func (db database) makeSearchHandler() gin.HandlerFunc {
 	return func(context *gin.Context) {
-		words := strings.Split(context.Query("words"), ",")
+		// Parse queries:
+		words := PreprocessWords(strings.Split(context.Query("word"), ","))
+		tags := FilterStrs(strings.Split(context.Query("tag"), ","), NotWhiteSpace)
+		laws := FilterStrs(strings.Split(context.Query("law"), ","), NotWhiteSpace)
+		judges := FilterStrs(strings.Split(context.Query("judge"), ","), NotWhiteSpace)
 		var mode bool
 		if context.Query("mode") == "OR" {
 			mode = modeOr
 		} else {
 			mode = modeAnd
 		}
-		result, err := searchCaseIdsByWords(db, words, mode)
+
+		// Performance searching for each field:
+		var (
+			result    searchResultSet
+			newResult searchResultSet
+			err       error
+		)
+		if len(words) > 0 {
+			result, err = db.searchCaseIdsByWord(words, mode)
+			if err != nil {
+				context.Status(http.StatusInternalServerError)
+				panic(err)
+			}
+			if len(result) == 0 { // early stop with empty response
+				context.JSON(http.StatusOK, emptySearchResponse)
+				return
+			}
+		}
+		if len(tags) > 0 {
+			newResult, err = db.searchCaseIdsByTag(tags, mode)
+			if err != nil {
+				context.Status(http.StatusInternalServerError)
+				panic(err)
+			}
+			result = newResult.merge(result)
+			if len(result) == 0 { // early stop with empty response
+				context.JSON(http.StatusOK, emptySearchResponse)
+				return
+			}
+		}
+		if len(laws) > 0 {
+			newResult, err = db.searchCaseIdsByLaw(laws, mode)
+			if err != nil {
+				context.Status(http.StatusInternalServerError)
+				panic(err)
+			}
+			result = newResult.merge(result)
+			if len(result) == 0 { // early stop with empty response
+				context.JSON(http.StatusOK, emptySearchResponse)
+				return
+			}
+		}
+		if len(judges) > 0 {
+			newResult, err = db.searchCaseIdsByJudge(judges, mode)
+			if err != nil {
+				context.Status(http.StatusInternalServerError)
+				panic(err)
+			}
+			result = newResult.merge(result)
+		}
+		if result == nil {
+			result = searchResultSet{}
+		}
+
+		context.JSON(http.StatusOK, result.toResponse())
+	}
+}
+
+func (db database) makeCaseInfoHandler() gin.HandlerFunc {
+	return func(context *gin.Context) {
+		idQuery := context.Query("id")
+		ids := strings.Split(idQuery, ",")
+		for _, id := range ids { // id check
+			if _, err := strconv.ParseInt(id, 10, 64); err != nil {
+				context.String(http.StatusBadRequest, "Bad `id` query \"%id\".", id)
+				return
+			}
+		}
+		rows, err := db.Query(fmt.Sprintf("SELECT id, judges, laws, tags, keywords, detail, tree FROM Cases WHERE id IN (%s) ORDER BY FIELD(id, %s)", idQuery, idQuery))
 		if err != nil {
 			context.Status(http.StatusInternalServerError)
 			panic(err)
 		}
-
-		context.JSON(http.StatusOK, gin.H{
-			"count":  len(result),
-			"result": result,
-		})
+		result := make([]gin.H, 0, len(ids))
+		for rows.Next() {
+			var (
+				id                                         int
+				judges, laws, tags, keywords, detail, tree string
+			)
+			if err := rows.Scan(&id, &judges, &laws, &tags, &keywords, &detail, &tree); err != nil {
+				context.Status(http.StatusInternalServerError)
+				panic(err)
+			}
+			result = append(result, gin.H{
+				"id":       id,
+				"judges":   judges,
+				"laws":     laws,
+				"tags":     tags,
+				"keywords": keywords,
+				"detail":   detail,
+				"tree":     tree,
+			})
+		}
+		context.JSON(http.StatusOK, result)
 	}
 }
 
-func searchCaseIdsByWords(db *sql.DB, words []string, mode bool) (searchResultSet, error) {
+func (db database) searchBy(querySql string, keys []string, mode bool) (searchResultSet, error) {
 	result := searchResultSet{}
-	for i, word := range words { // query each word in `WordIndex` table
-		//var newResult searchResultSet
+	for i, key := range keys { // query each key in `WordIndex` table
 		newResult := searchResultSet{}
-		word = preprocessWord(word)
-		rows, err := db.Query("SELECT `caseId`, `weight` FROM WordIndex WHERE `word` = ?", word)
+		rows, err := db.Query(querySql, key)
 		if err != nil {
 			return nil, err
 		}
@@ -74,7 +162,59 @@ func searchCaseIdsByWords(db *sql.DB, words []string, mode bool) (searchResultSe
 		}
 		if mode == modeAnd {
 			result = newResult
+			if len(result) == 0 { // early stop if empty
+				return result, nil
+			}
 		}
 	}
 	return result, nil
+}
+
+func (db database) searchCaseIdsByWord(words []string, mode bool) (searchResultSet, error) {
+	// language=MySQL
+	return db.searchBy("SELECT `caseId`, `weight` FROM WordIndex WHERE `word` = ?", words, mode)
+}
+
+func (db database) searchCaseIdsByTag(tags []string, mode bool) (searchResultSet, error) {
+	// language=MySQL
+	return db.searchBy("SELECT `caseId`, `weight` FROM TagIndex WHERE `tag` = ?", tags, mode)
+}
+
+func (db database) searchCaseIdsByLaw(laws []string, mode bool) (searchResultSet, error) {
+	// language=MySQL
+	return db.searchBy("SELECT `caseId`, `weight` FROM LawIndex WHERE `law` = ?", laws, mode)
+}
+
+func (db database) searchCaseIdsByJudge(judges []string, mode bool) (searchResultSet, error) {
+	// language=MySQL
+	return db.searchBy("SELECT `caseId`, `weight` FROM JudgeIndex WHERE `judge` = ?", judges, mode)
+}
+
+// Intersect search results, nil set stands for **full set**
+func (s searchResultSet) merge(t searchResultSet) searchResultSet {
+	if s == nil {
+		return t
+	}
+	if t == nil {
+		return s
+	}
+	if len(t) < len(s) {
+		return t.merge(s)
+	}
+	// Assume len(s) <= len(t)
+	res := searchResultSet{}
+	for id, w1 := range s {
+		if w2, contains := t[id]; contains {
+			res[id] = w1 + w2 // TODO maybe other operations
+		}
+	}
+	return res
+}
+
+// To http response body
+func (s searchResultSet) toResponse() gin.H {
+	return gin.H{
+		"count":  len(s),
+		"result": s,
+	}
 }

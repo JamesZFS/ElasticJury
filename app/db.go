@@ -2,19 +2,30 @@ package app
 
 import (
 	"database/sql"
+	_ "github.com/go-sql-driver/mysql"
 	"io/ioutil"
 	"strings"
 )
 
-/// Execute a db command, panic if error occurs
-func mustExec(db *sql.DB, command string, args ...interface{}) {
+type database struct {
+	*sql.DB
+}
+
+func newDatabase() (database, error) {
+	password := GetEnvVar("PASSWORD", "")
+	db, err := sql.Open("mysql", strings.Replace(dataSourceName, "<password>", password, 1))
+	return database{db}, err
+}
+
+// Execute a db command, panic if error occurs
+func (db database) mustExec(command string, args ...interface{}) {
 	if _, err := db.Exec(command, args...); err != nil {
 		panic(err)
 	}
 }
 
-/// Execute db commands from script file
-func execScriptFile(db *sql.DB, scriptPath string) error {
+// Execute db commands from script file
+func (db database) execScriptFile(scriptPath string) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -35,9 +46,9 @@ func execScriptFile(db *sql.DB, scriptPath string) error {
 	return tx.Commit()
 }
 
-/// Execute db commands from script file, panic if error occurs
-func mustExecScriptFile(db *sql.DB, scriptPath string) {
-	if err := execScriptFile(db, scriptPath); err != nil {
+// Execute db commands from script file, panic if error occurs
+func (db database) mustExecScriptFile(scriptPath string) {
+	if err := db.execScriptFile(scriptPath); err != nil {
 		panic(err)
 	}
 }

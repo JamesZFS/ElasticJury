@@ -9,3 +9,14 @@ func preprocessWord(word string) string {
 	// TODO stem word, remove stop words and escape
 	return word
 }
+
+func PreprocessWords(words []string) []string {
+	var res []string
+	for _, word := range words {
+		x := preprocessWord(word)
+		if x != "" {
+			res = append(res, x)
+		}
+	}
+	return res
+}
