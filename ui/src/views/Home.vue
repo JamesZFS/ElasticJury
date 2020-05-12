@@ -150,6 +150,17 @@
                 return this.result.ids.length
             }
         },
+        mounted() {
+            // possibly parse url into search param
+            let query = this.$route.query
+            if (query.hasOwnProperty('word') || query.hasOwnProperty('judge') ||
+                query.hasOwnProperty('law') || query.hasOwnProperty('tag')) {
+                this.displayWelcome = false;
+                // parse param from route and do search
+                this.parseParams(query)
+                this.doSearch()
+            }
+        },
         methods: {
             async setPage(page) {
                 this.curPage = page;
@@ -158,8 +169,23 @@
                 let resp = await getCaseInfo(idsToLoad);
                 this.result.info = Object.values(resp);
             },
-            async onSearch() {
-                this.displayWelcome = false;
+            parseParams(query) {
+                this.words.inputs = query.word ? query.word.split(',') : []
+                this.judges.inputs = query.judge ? query.judge.split(',') : []
+                this.laws.inputs = query.law ? query.law.split(',') : []
+                this.tags.inputs = query.tag ? query.tag.split(',') : []
+                this.mode = query.mode || 'AND'
+            },
+            dumpParams() {
+                let query = {};
+                if (this.words.inputs.length > 0) query.word = this.words.inputs.join(',')
+                if (this.judges.inputs.length > 0) query.judge = this.judges.inputs.join(',')
+                if (this.laws.inputs.length > 0) query.law = this.laws.inputs.join(',')
+                if (this.tags.inputs.length > 0) query.tag = this.tags.inputs.join(',')
+                query.mode = this.mode
+                return query
+            },
+            async doSearch() {
                 this.loading = true;
                 let resp = await searchCaseId(
                     this.words.inputs,
@@ -181,6 +207,11 @@
                     this.foundTip = true
                 }
                 this.loading = false;
+            },
+            onSearch() {
+                this.displayWelcome = false;
+                this.$router.push({query: this.dumpParams()});
+                this.doSearch()
             },
             async onPing() {
                 let resp = await ping();
