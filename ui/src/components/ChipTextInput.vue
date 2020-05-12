@@ -10,7 +10,7 @@
           multiple
           flat
           solo-inverted
-          prepend-inner-icon="mdi-magnify"
+          :prepend-inner-icon="icon"
   >
     <template v-slot:selection="{ attrs, item, select, selected }">
       <v-chip
@@ -31,7 +31,8 @@
         props: {
             placeholder: String,
             candidates: Array,
-            value: Array  // for v-model
+            value: Array,  // for v-model
+            icon: String,
         },
         methods: {
             remove(item) {

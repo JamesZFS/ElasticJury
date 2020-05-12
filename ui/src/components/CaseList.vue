@@ -3,6 +3,7 @@
     <template v-for="(item, index) in items">
       <v-btn
               text
+              x-large
               class="font-weight-bold"
               @click="$emit('click', index)"
       >

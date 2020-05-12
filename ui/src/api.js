@@ -12,11 +12,19 @@ export async function ping() {
 
 /**
  * @param words{[string]}
+ * @param judges{[string]}
+ * @param laws{[string]}
+ * @param tags{[string]}
  * @returns {Promise<Object>}
  */
-export async function searchCaseId(words) {
+export async function searchCaseId(words, judges, laws, tags) {
     let res = await Axios.get(APIS.SEARCH_CASE_ID, {
-        params: {word: words.join(',')}
+        params: {
+            word: words.join(','),
+            judge: judges.join(','),
+            law: laws.join(','),
+            tag: tags.join(','),
+        }
     });
     return res.data
 }
