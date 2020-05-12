@@ -16,7 +16,7 @@
       </div>
     </v-expand-transition>
 
-    <div class="mx-auto my-2 search-box">
+    <div class="mx-auto my-5 search-box">
       <ChipTextInput
               placeholder="全文检索词..."
               icon="mdi-magnify"
@@ -44,13 +44,12 @@
     </div>
 
     <v-row justify="center" class="mb-2">
-      <v-btn
-              @click="onSearch"
-              class="mr-10"
-              :disabled="!searchAble"
-      >Search
-      </v-btn>
-      <v-btn @click="onPing">Ping</v-btn>
+      <v-radio-group v-model="mode" row class="mt-1 mr-8">
+        <v-radio label="And" value="AND"/>
+        <v-radio label="Or" value="OR"/>
+      </v-radio-group>
+      <v-btn @click="onSearch" color="primary" :disabled="!searchAble">Search</v-btn>
+      <v-btn @click="onPing" class="ml-10" color="secondary">Ping</v-btn>
     </v-row>
 
     <v-skeleton-loader v-if="loading" type="table"/>
@@ -117,6 +116,7 @@
             casesPerPage: 10,
             notFoundTip: false,
             foundTip: false,
+            mode: 'AND',
             words: {
                 inputs: [],
                 candidates: ['调解', '协议', '当事人'],
@@ -161,12 +161,12 @@
             async onSearch() {
                 this.displayWelcome = false;
                 this.loading = true;
-                console.log(this.words.inputs);
                 let resp = await searchCaseId(
                     this.words.inputs,
                     this.judges.inputs,
                     this.laws.inputs,
                     this.tags.inputs,
+                    this.mode
                 );
                 if (resp.count === 0) {
                     // no result:
