@@ -44,19 +44,60 @@
     </div>
 
     <v-row justify="center" class="mb-2">
-      <v-btn @click="onSearch" class="mr-10">Search</v-btn>
-      <v-btn @click="onInfo" class="mr-10">Info</v-btn>
+      <v-btn
+              @click="onSearch"
+              class="mr-10"
+              :disabled="!searchAble"
+      >Search
+      </v-btn>
       <v-btn @click="onPing">Ping</v-btn>
     </v-row>
 
-    <v-fade-transition>
-      <v-skeleton-loader v-if="loading" type="table"/>
-      <CaseList
-              v-else
-              :items="result.info"
-              @click="onClickCase"
-      />
-    </v-fade-transition>
+    <v-skeleton-loader v-if="loading" type="table"/>
+    <CaseList
+            v-else
+            :items="result.info"
+            @click="onClickCase"
+    />
+    <v-pagination
+            v-if="resultLength > 0"
+            v-model="curPage"
+            :total-visible="10"
+            :length="pageCount"
+            @input="setPage"
+            circle
+            class="my-5"
+    />
+
+    <v-snackbar
+            v-model="notFoundTip"
+            color="error"
+            :timeout="3000"
+    >
+      没有找到相关结果
+      <v-btn
+              dark
+              text
+              @click="notFoundTip = false"
+      >
+        Close
+      </v-btn>
+    </v-snackbar>
+
+    <v-snackbar
+            v-model="foundTip"
+            color="success"
+            :timeout="3000"
+    >
+      共找到{{resultLength}}条相关结果
+      <v-btn
+              dark
+              text
+              @click="foundTip = false"
+      >
+        Close
+      </v-btn>
+    </v-snackbar>
 
   </v-container>
 </template>
@@ -72,6 +113,10 @@
         data: () => ({
             displayWelcome: true,
             loading: false,
+            curPage: 0,
+            casesPerPage: 10,
+            notFoundTip: false,
+            foundTip: false,
             words: {
                 inputs: [],
                 candidates: ['调解', '协议', '当事人'],
@@ -93,7 +138,26 @@
                 info: [],
             }
         }),
+        computed: {
+            pageCount() {
+                return Math.ceil(this.result.ids.length / this.casesPerPage)
+            },
+            searchAble() {
+                return this.words.inputs.length > 0 || this.judges.inputs.length > 0 ||
+                    this.laws.inputs.length > 0 || this.tags.inputs.length > 0
+            },
+            resultLength() {
+                return this.result.ids.length
+            }
+        },
         methods: {
+            async setPage(page) {
+                this.curPage = page;
+                // load results when page changes
+                let idsToLoad = this.result.ids.slice((this.curPage - 1) * this.casesPerPage, this.curPage * this.casesPerPage);
+                let resp = await getCaseInfo(idsToLoad);
+                this.result.info = Object.values(resp);
+            },
             async onSearch() {
                 this.displayWelcome = false;
                 this.loading = true;
@@ -104,18 +168,19 @@
                     this.laws.inputs,
                     this.tags.inputs,
                 );
-                // alert(JSON.stringify(resp));
-                this.result.ids = Object.entries(resp.result)
-                    // .sort(([_id1, val1], [_id2, val2]) => val2 - val1)
-                    .map(([id, _val]) => parseInt(id));
-                await this.onInfo();
+                if (resp.count === 0) {
+                    // no result:
+                    this.result.ids = []
+                    this.result.info = []
+                    this.notFoundTip = true
+                } else {
+                    this.result.ids = Object.entries(resp.result)
+                        // .sort(([_id1, val1], [_id2, val2]) => val2 - val1)
+                        .map(([id]) => parseInt(id));
+                    await this.setPage(1)
+                    this.foundTip = true
+                }
                 this.loading = false;
-            },
-            async onInfo() {
-                console.log(this.result.ids);
-                let resp = await getCaseInfo(this.result.ids);
-                this.result.info = Object.values(resp);
-                console.log(resp);
             },
             async onPing() {
                 let resp = await ping();
@@ -123,7 +188,7 @@
             },
             onClickCase(index) {
                 alert(`Clicked ${index}`);
-            }
+            },
         }
     }
 </script>
