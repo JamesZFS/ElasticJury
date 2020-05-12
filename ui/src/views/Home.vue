@@ -27,16 +27,22 @@
       <v-btn @click="onPing">Ping</v-btn>
     </v-row>
 
+    <CaseList
+            :items="result.info"
+            @click="onClickCase"
+    />
+
   </v-container>
 </template>
 
 <script>
     import ChipTextInput from "../components/ChipTextInput";
+    import CaseList from "../components/CaseList";
     import {getCaseInfo, ping, searchCaseId} from "../api";
 
     export default {
         name: 'Home',
-        components: {ChipTextInput},
+        components: {ChipTextInput, CaseList},
         data: () => ({
             search: {
                 inputs: [],
@@ -44,36 +50,37 @@
             },
             result: {
                 ids: [],
-                info: null,
+                info: [],
             }
         }),
         methods: {
             async onSearch() {
                 console.log(this.search.inputs);
                 let resp = await searchCaseId(this.search.inputs);
-                alert(JSON.stringify(resp));
+                // alert(JSON.stringify(resp));
                 this.result.ids = Object.entries(resp.result)
                     // .sort(([_id1, val1], [_id2, val2]) => val2 - val1)
                     .map(([id, _val]) => parseInt(id));
+                await this.onInfo();
             },
             async onInfo() {
                 console.log(this.result.ids);
                 let resp = await getCaseInfo(this.result.ids);
-                this.result.info = resp;
+                this.result.info = Object.values(resp);
                 console.log(resp);
             },
             async onPing() {
                 let resp = await ping();
                 alert(resp);
+            },
+            onClickCase(index) {
+                alert(`Clicked ${index}`);
             }
         }
     }
 </script>
 
 <style scoped>
-  /*h1, p {*/
-  /*  text-align: center;*/
-  /*}*/
   .search-box {
     height: 10vh;
     max-width: 800px;

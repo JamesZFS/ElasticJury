@@ -36,7 +36,6 @@
         methods: {
             remove(item) {
                 this.value.splice(this.value.indexOf(item), 1);
-                this.value = [...this.value]
             },
             onInput(value) {
                 this.$emit('input', value)

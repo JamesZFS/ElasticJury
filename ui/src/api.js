@@ -1,6 +1,6 @@
 import Axios from "axios";
 
-const APIS = {
+export const APIS = {
     PING: '/api/ping',
     SEARCH_CASE_ID: '/api/search',
     GET_CASE_INFO: '/api/case',
@@ -23,7 +23,7 @@ export async function searchCaseId(words) {
 
 /**
  * @param ids{[int]}
- * @returns {Promise<any>}
+ * @returns {Promise<Object>}
  */
 export async function getCaseInfo(ids) {
     let res = await Axios.get(APIS.GET_CASE_INFO, {
