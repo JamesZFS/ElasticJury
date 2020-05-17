@@ -7,7 +7,7 @@ import (
 
 func main() {
 	searchEngine := app.NewApp()
-	port := app.GetEnvVar("PORT", "3000")
+	port := app.GetEnvVar("PORT", "8000")
 	// Listen and Server in localhost
 	log.Fatal(searchEngine.Run("localhost:" + port))
 }

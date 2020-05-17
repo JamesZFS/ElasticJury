@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 import MySQLdb
 
 from entries import *
@@ -13,7 +15,7 @@ class MySQLWrapper:
         # Connection will not include password
         # Please manually add user/password or set your MySQL root settings to login without password
         log_info('Database', 'Connecting to MySQL database ...')
-        self.connection = MySQLdb.connect(self.db_host, password=password)
+        self.connection = MySQLdb.connect(self.db_host, password=password, charset='utf8')
         self.commands_not_committed = 0
         if drop:
             self.drop()
@@ -30,7 +32,7 @@ class MySQLWrapper:
         self.execute('USE ElasticJury')
 
     def execute(self, command, values=None, commit=False):
-        # log_info('Database', 'Executing command={} with values={}'.format(command, values))
+        log_info('Database', 'Executing command={} with values={}'.format(command, values))
         cursor = self.connection.cursor()
         if values:
             cursor.execute(command, values)
