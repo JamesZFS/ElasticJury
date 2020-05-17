@@ -1,3 +1,5 @@
 backup
 logs
 venv
+# Too big
+idf_dict.json

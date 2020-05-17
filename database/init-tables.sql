@@ -34,6 +34,6 @@ CREATE TABLE IF NOT EXISTS TagIndex
 (
     `tag`    VARCHAR(128) NOT NULL,
     `caseId` INT UNSIGNED NOT NULL, # Foreign key 指向案件
-    `weight` FLOAT        NOT NULL, # jieba 分词的 topK 功能
+    `weight` FLOAT        NOT NULL, # 一些重要的标签和 jieba 分词的 topK 功能
     FOREIGN KEY (`caseId`) REFERENCES Cases (`id`)
 ) CHAR SET utf8;

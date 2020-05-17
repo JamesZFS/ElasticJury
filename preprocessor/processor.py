@@ -179,12 +179,21 @@ def analyze(mapping, path):
 
 def reduce_count_weights(items):
     counter = {}
-    max_value = 0
     for item in items:
         value = counter.get(item, 0)
         counter[item] = value + 1
-        max_value = max(value + 1, max_value)
-    return [(k, v / max_value) for k, v in counter.items()]
+    total = len(items)
+    return [(k, v / total) for k, v in counter.items()]
+
+
+def reduce_words(items, idf_dict):
+    counter = {}
+    total = 0
+    for item in items:
+        value = counter.get(item, 0)
+        counter[item] = value + 1
+        total += 1
+    return [(k, v / total * idf_dict[k]) for k, v in counter.items()]
 
 
 def collect_entries(items_with_weights, table_name, key_name, case_id):
@@ -208,16 +217,13 @@ def reduce_laws(laws):
         else:
             log_info('Debug', 'Failed to parse law {}'.format(k))
         reduced[k] = v + reduced.get(k, 0)
-    max_value = 0
-    for k, v in reduced.items():
-        max_value = max(max_value, v)
-    return [(k, v / max_value) for k, v in reduced.items()]
+    return [(k, v) for k, v in reduced.items()]
 
 
 stopwords = set([line.strip() for line in open('stopwords.txt', 'r', encoding='utf-8').readlines()])
 
 
-def insert_into_database(database, entry):
+def insert_into_database(database, idf_dict, entry):
     if len(entry) == 0:
         return
 
@@ -235,7 +241,7 @@ def insert_into_database(database, entry):
 
     # TODO: change to better calculating method later
     arrays = [
-        (reduce_count_weights(filter(lambda w: (w not in stopwords) and (len(w.strip()) > 0), jieba.lcut(detail))),
+        (reduce_words(filter(lambda w: (w not in stopwords) and (len(w.strip()) > 0), jieba.lcut(detail)), idf_dict),
          'WordIndex', 'word'),
         (reduce_count_weights(entry.get('FGRYXM', [])), 'JudgeIndex', 'judge'),
         (reduce_laws(entry.get('FT', [])), 'LawIndex', 'law'),
@@ -257,13 +263,15 @@ def insert_into_database(database, entry):
     log_info('ShowCase', 'case_id={}'.format(case_id))
     log_info('ShowCase', 'detail={}'.format(detail))
     log_info('ShowCase', 'tree={}'.format(tree))
-    log_info('ShowCase', 'words={}'.format(arrays[0][0]))
+    words = arrays[0][0]
+    words.sort(key=lambda x: x[1], reverse=True)
+    log_info('ShowCase', 'words={}'.format(words))
     log_info('ShowCase', 'judges={}'.format(arrays[1][0]))
     log_info('ShowCase', 'laws={}'.format(arrays[2][0]))
     log_info('ShowCase', 'tags={}'.format(arrays[3][0]))
 
 
-def process(mapping, path, db_password):
+def process(mapping, idf_dict, path, db_password):
     log_info('Jieba', 'Initializing jieba ...')
     jieba.initialize()
     log_info('Processor', 'Processing {} ...'.format(path))
@@ -280,7 +288,7 @@ def process(mapping, path, db_password):
     step = current = 0.05
     for index, file in enumerate(all_xmls):
         entry = analyze(mapping, file)
-        insert_into_database(database, entry)
+        insert_into_database(database, idf_dict, entry)
         if (index + 1) / total >= current:
             log_info('Processor', '{:.0f}% completed'.format(current * 100))
             current += step
