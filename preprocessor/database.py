@@ -32,7 +32,7 @@ class MySQLWrapper:
         self.execute('USE ElasticJury')
 
     def execute(self, command, values=None, commit=False):
-        log_info('Database', 'Executing command={} with values={}'.format(command, values))
+        # log_info('Database', 'Executing command={} with values={}'.format(command, values))
         cursor = self.connection.cursor()
         if values:
             cursor.execute(command, values)

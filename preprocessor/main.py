@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser(description='ElasticJury Data Preprocessor')
 parser.add_argument('--path', type=str, default='../dataset/use', help='Relative path for data to process')
 parser.add_argument('--mapping', type=str, default='mapping.json', help='Tag to nameCN mapping file path')
 parser.add_argument('--idf_dict', type=str, default='idf_dict.json', help='Idf dict file path')
-parser.add_argument('--password', type=str, default='', help='Password to login your local mysql account')
+parser.add_argument('--password', type=str, default='ElasticJury', help='Password to login your local mysql account')
 parser.add_argument('--clean-mapping', dest='clean_mapping', action='store_true', help='Clean the mapping file')
 parser.add_argument('--clean-idf-dict', dest='clean_idf_dict', action='store_true', help='Clean the idf dict file')
 

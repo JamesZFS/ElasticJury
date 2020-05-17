@@ -259,16 +259,17 @@ def insert_into_database(database, idf_dict, entry):
         entries = collect_entries(array[0], array[1], array[2], case_id)
         database.insert_many(entries)
 
-    log_info('ShowCase', '')
-    log_info('ShowCase', 'case_id={}'.format(case_id))
-    log_info('ShowCase', 'detail={}'.format(detail))
-    log_info('ShowCase', 'tree={}'.format(tree))
-    words = arrays[0][0]
-    words.sort(key=lambda x: x[1], reverse=True)
-    log_info('ShowCase', 'words={}'.format(words))
-    log_info('ShowCase', 'judges={}'.format(arrays[1][0]))
-    log_info('ShowCase', 'laws={}'.format(arrays[2][0]))
-    log_info('ShowCase', 'tags={}'.format(arrays[3][0]))
+    # log_info('ShowCase', '')
+    # log_info('ShowCase', 'case_id={}'.format(case_id))
+    # log_info('ShowCase', 'detail={}'.format(detail))
+    # log_info('ShowCase', 'tree={}'.format(tree))
+    # log_info('ShowCase', 'keywords={}'.format(keywords))
+    # words = arrays[0][0]
+    # words.sort(key=lambda x: x[1], reverse=True)
+    # log_info('ShowCase', 'words={}'.format(words))
+    # log_info('ShowCase', 'judges={}'.format(arrays[1][0]))
+    # log_info('ShowCase', 'laws={}'.format(arrays[2][0]))
+    # log_info('ShowCase', 'tags={}'.format(arrays[3][0]))
 
 
 def process(mapping, idf_dict, path, db_password):
@@ -285,12 +286,12 @@ def process(mapping, idf_dict, path, db_password):
 
     database = MySQLWrapper(drop=True, password=db_password)
 
-    step = current = 0.05
+    step = current = 0.005
     for index, file in enumerate(all_xmls):
         entry = analyze(mapping, file)
         insert_into_database(database, idf_dict, entry)
         if (index + 1) / total >= current:
-            log_info('Processor', '{:.0f}% completed'.format(current * 100))
+            log_info('Processor', '{:.2f}% completed'.format(current * 100))
             current += step
 
     global parsing_error_count
