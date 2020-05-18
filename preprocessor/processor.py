@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-
+import MySQLdb
 import jieba
 import jieba.analyse
 import re
@@ -239,7 +239,6 @@ def insert_into_database(database, idf_dict, entry):
                 xml_tags.extend(filter(lambda x: len(x) > 0, re.split('[ 、]', to_split)))
     xml_tags = [(k, 1) for k in set(xml_tags)]
 
-    # TODO: change to better calculating method later
     arrays = [
         (reduce_words(filter(lambda w: (w not in stopwords) and (len(w.strip()) > 0), jieba.lcut(detail)), idf_dict),
          'WordIndex', 'word'),
@@ -287,14 +286,20 @@ def process(mapping, idf_dict, path, db_password):
     database = MySQLWrapper(drop=True, password=db_password)
 
     step = current = 0.005
+    database_error_count = 0
     for index, file in enumerate(all_xmls):
+        # log_info('Processor', 'Processing {}'.format(file))
         entry = analyze(mapping, file)
-        insert_into_database(database, idf_dict, entry)
+        try:
+            insert_into_database(database, idf_dict, entry)
+        except MySQLdb.DatabaseError as error:
+            database_error_count += 1
+            log_info('Debug', 'Insert error: {} at file {}'.format(error, file))
         if (index + 1) / total >= current:
             log_info('Processor', '{:.2f}% completed'.format(current * 100))
             current += step
 
     global parsing_error_count
-    log_info('Processor', '({} parsing error, {} bad rules and {} tag match errors)'
-             .format(parsing_error_count, RuleNotCompatibleError.count, TagMatchError.count))
+    log_info('Processor', '({} parsing error, {} database error, {} bad rules and {} tag match errors)'
+             .format(parsing_error_count, database_error_count, RuleNotCompatibleError.count, TagMatchError.count))
     database.close()
