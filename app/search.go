@@ -102,7 +102,7 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 				return
 			}
 		}
-		rows, err := db.Query(fmt.Sprintf("SELECT id, judges, laws, tags, keywords, detail, tree FROM Cases WHERE id IN (%s) ORDER BY FIELD(id, %s)", idQuery, idQuery))
+		rows, err := db.Query(fmt.Sprintf("SELECT id, judges, laws, tags, detail FROM Cases WHERE id IN (%s) ORDER BY FIELD(id, %s)", idQuery, idQuery))
 		if err != nil {
 			context.Status(http.StatusInternalServerError)
 			panic(err)
@@ -110,21 +110,19 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 		result := make([]gin.H, 0, len(ids))
 		for rows.Next() {
 			var (
-				id                                         int
-				judges, laws, tags, keywords, detail, tree string
+				id                         int
+				judges, laws, tags, detail string
 			)
-			if err := rows.Scan(&id, &judges, &laws, &tags, &keywords, &detail, &tree); err != nil {
+			if err := rows.Scan(&id, &judges, &laws, &tags, &detail); err != nil {
 				context.Status(http.StatusInternalServerError)
 				panic(err)
 			}
 			result = append(result, gin.H{
-				"id":       id,
-				"judges":   judges,
-				"laws":     laws,
-				"tags":     tags,
-				"keywords": keywords,
-				"detail":   detail,
-				"tree":     tree,
+				"id":     id,
+				"judges": judges,
+				"laws":   laws,
+				"tags":   tags,
+				"detail": detail,
 			})
 		}
 		context.JSON(http.StatusOK, result)
