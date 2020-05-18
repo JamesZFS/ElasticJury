@@ -12,7 +12,7 @@ from utility import *
 parser = argparse.ArgumentParser(description='ElasticJury Data Preprocessor')
 
 # Configs
-parser.add_argument('--path', type=str, default='../dataset/use', help='Relative path for data to process')
+parser.add_argument('--path', type=str, default='demo', help='Relative path for data to process')
 parser.add_argument('--mapping', type=str, default='mapping.json', help='Tag to nameCN mapping file path')
 parser.add_argument('--idf_dict', type=str, default='idf_dict.json', help='Idf dict file path')
 parser.add_argument('--password', type=str, default='ElasticJury', help='Password to login your local mysql account')

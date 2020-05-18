@@ -229,7 +229,6 @@ def insert_into_database(database, idf_dict, entry):
 
     detail = entry.get('QW', '')
     tree = entry.get('tree', '')
-    keywords = jieba.analyse.textrank(detail, topK=8)
 
     xml_tags = []
     for tag, _, only, used_in_tag in walk_rules:
@@ -237,13 +236,13 @@ def insert_into_database(database, idf_dict, entry):
             assert not only
             for to_split in entry.get(tag, []):
                 xml_tags.extend(filter(lambda x: len(x) > 0, re.split('[ 、]', to_split)))
-    xml_tags = [(k, 1) for k in set(xml_tags)]
-    xml_tags = list(filter(lambda x: len(x) < 32, xml_tags))
+    xml_tags = [(k, 1) for k in filter(lambda x: len(x) < 32, set(xml_tags))]
     judges = list(filter(lambda x: len(x) < 16, entry.get('FGRYXM', [])))
 
     arrays = [
         (reduce_words(filter(
-            lambda w: (w not in stopwords) and (len(w.strip()) > 0) and len(w) < 16, jieba.lcut(detail)), idf_dict),
+            lambda w: (w not in stopwords) and (len(w.strip()) > 0)
+                      and len(w) < 16, jieba.lcut(detail)), idf_dict),
          'WordIndex', 'word'),
         [reduce_count_weights(judges), 'JudgeIndex', 'judge'],
         (reduce_laws(entry.get('FT', [])), 'LawIndex', 'law'),
@@ -253,7 +252,7 @@ def insert_into_database(database, idf_dict, entry):
 
     # Insert case
     extract = lambda x, i: [item[0] for item in x[i][0]]
-    case = CaseEntry(extract(arrays, 1), extract(arrays, 2), extract(arrays, 3), keywords, detail, tree)
+    case = CaseEntry(extract(arrays, 1), extract(arrays, 2), extract(arrays, 3), detail, tree)
     case_id = database.insert(case)
 
     # Insert index

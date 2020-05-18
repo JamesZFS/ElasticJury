@@ -11,19 +11,18 @@ class MySQLEntry:
 class CaseEntry(MySQLEntry):
     separator = '#'
 
-    def __init__(self, judges, laws, tags, keywords, detail, tree):
+    def __init__(self, judges, laws, tags, detail, tree):
         self.judges = judges
         self.laws = laws
         self.tags = tags
         self.detail = detail
         self.tree = tree
-        self.keywords = keywords
 
     def generate_insert_command(self):
         # Field id will automatically increase
-        command = 'INSERT INTO Cases(judges, laws, tags, keywords, detail, tree) VALUES (%s,%s,%s,%s,%s,%s)'
+        command = 'INSERT INTO Cases(judges, laws, tags, detail, tree) VALUES (%s,%s,%s,%s,%s)'
         values = (self.separator.join(self.judges), self.separator.join(self.laws),
-                  self.separator.join(self.tags), self.separator.join(self.keywords), self.detail, self.tree)
+                  self.separator.join(self.tags), self.detail, self.tree)
         return command, values
 
 
