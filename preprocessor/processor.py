@@ -238,11 +238,14 @@ def insert_into_database(database, idf_dict, entry):
             for to_split in entry.get(tag, []):
                 xml_tags.extend(filter(lambda x: len(x) > 0, re.split('[ 、]', to_split)))
     xml_tags = [(k, 1) for k in set(xml_tags)]
+    xml_tags = list(filter(lambda x: len(x) < 32, xml_tags))
+    judges = list(filter(lambda x: len(x) < 16, entry.get('FGRYXM', [])))
 
     arrays = [
-        (reduce_words(filter(lambda w: (w not in stopwords) and (len(w.strip()) > 0), jieba.lcut(detail)), idf_dict),
+        (reduce_words(filter(
+            lambda w: (w not in stopwords) and (len(w.strip()) > 0) and len(w) < 16, jieba.lcut(detail)), idf_dict),
          'WordIndex', 'word'),
-        (reduce_count_weights(entry.get('FGRYXM', [])), 'JudgeIndex', 'judge'),
+        [reduce_count_weights(judges), 'JudgeIndex', 'judge'],
         (reduce_laws(entry.get('FT', [])), 'LawIndex', 'law'),
         # AllowPos 是词性位置
         (xml_tags, 'TagIndex', 'tag')
