@@ -4,7 +4,6 @@ CREATE TABLE IF NOT EXISTS Cases # 案件数据库
     `judges`    TEXT         NULL,     # 法官，考虑到一对多关系，倒排索引需单独建表
     `laws`      TEXT         NULL,     # 法律，考虑到一对多关系，倒排索引需单独建表
     `tags`      TEXT         NULL,     # 标签，考虑到一对多关系，倒排索引需单独建表
-    `keywords`  TEXT         NULL,     # 关键词
     `detail`    LONGTEXT     NOT NULL, # 案情（xml 中的全文部分）
     `tree`	    LONGTEXT	  NOT NULL, # xml 的树形结构
     PRIMARY KEY (`id` ASC)
