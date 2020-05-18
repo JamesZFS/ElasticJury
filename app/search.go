@@ -35,7 +35,7 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			mode = modeAnd
 		}
 
-		// Performance searching for each field:
+		// Perform searching for each field:
 		var (
 			result    searchResultSet
 			newResult searchResultSet

@@ -55,7 +55,8 @@
     <v-skeleton-loader v-if="loading" type="table"/>
     <CaseList
             v-else
-            :items="result.info"
+            :items="result.infos"
+            :weights="result.weightsToDisplay"
             @click="onClickCase"
     />
     <v-pagination
@@ -135,7 +136,9 @@
             },
             result: {
                 ids: [],
-                info: [],
+                weights: [],
+                infos: [],
+                weightsToDisplay: [],
             }
         }),
         computed: {
@@ -163,11 +166,14 @@
         },
         methods: {
             async setPage(page) {
-                this.curPage = page;
+                this.loading = true
+                this.curPage = page
                 // load results when page changes
-                let idsToLoad = this.result.ids.slice((this.curPage - 1) * this.casesPerPage, this.curPage * this.casesPerPage);
-                let resp = await getCaseInfo(idsToLoad);
-                this.result.info = Object.values(resp);
+                let idsToLoad = this.result.ids.slice((this.curPage - 1) * this.casesPerPage, this.curPage * this.casesPerPage)
+                let resp = await getCaseInfo(idsToLoad)
+                this.result.weightsToDisplay = this.result.weights.slice((this.curPage - 1) * this.casesPerPage, this.curPage * this.casesPerPage)
+                this.result.infos = Object.values(resp)
+                this.loading = false
             },
             parseParams(query) {
                 this.words.inputs = query.word ? query.word.split(',') : []
@@ -193,29 +199,35 @@
                     this.laws.inputs,
                     this.tags.inputs,
                     this.mode
-                );
+                )
                 if (resp.count === 0) {
                     // no result:
                     this.result.ids = []
-                    this.result.info = []
+                    this.result.infos = []
                     this.notFoundTip = true
                 } else {
-                    this.result.ids = Object.entries(resp.result)
-                        // .sort(([_id1, val1], [_id2, val2]) => val2 - val1)
-                        .map(([id]) => parseInt(id));
+                    let pairs = Object.entries(resp.result)
+                        // eslint-disable-next-line
+                        .sort(([_id1, weight1], [_id2, weight2]) => weight2 - weight1) // sort by weight desc
+                    this.result.ids = []
+                    this.result.weights = []
+                    pairs.forEach(([id, weight]) => {
+                        this.result.ids.push(parseInt(id))
+                        this.result.weights.push(weight)
+                    })
                     await this.setPage(1)
                     this.foundTip = true
                 }
-                this.loading = false;
+                this.loading = false
             },
             onSearch() {
-                this.displayWelcome = false;
-                this.$router.push({query: this.dumpParams()});
+                this.displayWelcome = false
+                this.$router.push({query: this.dumpParams()})
                 this.doSearch()
             },
             async onPing() {
-                let resp = await ping();
-                alert(resp);
+                let resp = await ping()
+                alert(resp)
             },
             onClickCase(index) {
                 alert(`Clicked ${index}`);
