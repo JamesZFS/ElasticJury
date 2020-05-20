@@ -8,7 +8,7 @@
                 class="font-weight-bold"
                 @click="$emit('click', index)"
         >
-          {{'案例' + item.id}}
+          {{`案例 ${item.id} : ${weights[index]}`}}
         </v-btn>
 
         <v-divider></v-divider>
@@ -33,10 +33,6 @@
                 {{item.tags}}
               </div>
               <div class="my-2">
-                <span class="font-weight-bold">关键词：</span>
-                {{item.keywords}}
-              </div>
-              <div class="my-2">
                 <span class="font-weight-bold">细节：</span>
                 <v-list-item-subtitle>{{item.detail}}</v-list-item-subtitle>
               </div>
@@ -52,7 +48,10 @@
 <script>
     export default {
         name: "CaseList",
-        props: {items: Array},
+        props: {
+            items: Array,
+            weights: Array,
+        },
         data: () => ({}),
         methods: {}
     }
