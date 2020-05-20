@@ -273,7 +273,7 @@ def insert_into_database(database, idf_dict, entry):
     # log_info('ShowCase', 'tags={}'.format(arrays[3][0]))
 
 
-def process(mapping, idf_dict, path, db_password):
+def process(mapping, idf_dict, path, db_password, drop):
     log_info('Jieba', 'Initializing jieba ...')
     jieba.initialize()
     log_info('Processor', 'Processing {} ...'.format(path))
@@ -285,7 +285,7 @@ def process(mapping, idf_dict, path, db_password):
     total = len(all_xmls)
     log_info('Processor', '{} xmls to process'.format(total))
 
-    database = MySQLWrapper(drop=True, password=db_password)
+    database = MySQLWrapper(drop=drop, password=db_password)
 
     step = current = 0.005
     database_error_count = 0
