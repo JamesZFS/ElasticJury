@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS Cases # 案件数据库
+CREATE TABLE IF NOT EXISTS Cases    # 案件数据库
 (
     `id`     INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `judges` TEXT         NULL,     # 法官，考虑到一对多关系，倒排索引需单独建表

@@ -1,4 +1,5 @@
 # -*- coding: UTF-8 -*-
+
 import MySQLdb
 import jieba
 import jieba.analyse

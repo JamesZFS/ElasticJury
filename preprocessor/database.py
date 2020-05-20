@@ -7,7 +7,9 @@ from utility import *
 
 
 class MySQLWrapper:
-    db_host = 'localhost'
+    db_host = 'cdb-f0b6x25m.cd.tencentcdb.com'
+    db_port = 10104
+    db_user = 'root'
     db_init_table_script = '../database/init-tables.sql'
     freq_commit = 50
 
@@ -15,7 +17,8 @@ class MySQLWrapper:
         # Connection will not include password
         # Please manually add user/password or set your MySQL root settings to login without password
         log_info('Database', 'Connecting to MySQL database ...')
-        self.connection = MySQLdb.connect(self.db_host, password=password, charset='utf8')
+        self.connection = MySQLdb.connect(self.db_host, user=self.db_user, port=self.db_port,
+                                          password=password, charset='utf8')
         self.commands_not_committed = 0
         if drop:
             self.drop()
