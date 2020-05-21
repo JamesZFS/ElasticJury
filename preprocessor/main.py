@@ -12,7 +12,7 @@ from utility import *
 parser = argparse.ArgumentParser(description='ElasticJury Data Preprocessor')
 
 # Configs
-parser.add_argument('--path', type=str, default='../dataset/use', help='Relative path for data to process')
+parser.add_argument('--path', type=str, default='../dataset/use/xml_3', help='Relative path for data to process')
 parser.add_argument('--mapping', type=str, default='mapping.json', help='Tag to nameCN mapping file path')
 parser.add_argument('--idf_dict', type=str, default='idf_dict.json', help='Idf dict file path')
 parser.add_argument('--password', type=str, default='ElasticJury123', help='Password to login your local mysql account')
@@ -26,7 +26,7 @@ parser.add_argument('--no-mapping', dest='do_mapping', action='store_false', hel
 parser.add_argument('--no-idf-dict', dest='do_idf_dict', action='store_false', help='Whether generate idf word dict')
 
 parser.set_defaults(do_db=True, do_mapping=True, clean_mapping=False,
-                    do_idf_dict=True, clean_idf_dict=False, drop_db=False)
+                    do_idf_dict=True, clean_idf_dict=False, drop_db=True)
 
 
 def run(path, mapping_path, idf_dict_path, db_password, do_db,

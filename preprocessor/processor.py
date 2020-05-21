@@ -261,17 +261,16 @@ def insert_into_database(database, idf_dict, entry):
         entries = collect_entries(array[0], array[1], array[2], case_id)
         database.insert_many(entries)
 
-    # log_info('ShowCase', '')
-    # log_info('ShowCase', 'case_id={}'.format(case_id))
-    # log_info('ShowCase', 'detail={}'.format(detail))
-    # log_info('ShowCase', 'tree={}'.format(tree))
-    # log_info('ShowCase', 'keywords={}'.format(keywords))
-    # words = arrays[0][0]
-    # words.sort(key=lambda x: x[1], reverse=True)
-    # log_info('ShowCase', 'words={}'.format(words))
-    # log_info('ShowCase', 'judges={}'.format(arrays[1][0]))
-    # log_info('ShowCase', 'laws={}'.format(arrays[2][0]))
-    # log_info('ShowCase', 'tags={}'.format(arrays[3][0]))
+    log_info('ShowCase', '')
+    log_info('ShowCase', 'case_id={}'.format(case_id))
+    log_info('ShowCase', 'detail={}'.format(detail))
+    log_info('ShowCase', 'tree={}'.format(tree))
+    words = arrays[0][0]
+    words.sort(key=lambda x: x[1], reverse=True)
+    log_info('ShowCase', 'words={}'.format(words))
+    log_info('ShowCase', 'judges={}'.format(arrays[1][0]))
+    log_info('ShowCase', 'laws={}'.format(arrays[2][0]))
+    log_info('ShowCase', 'tags={}'.format(arrays[3][0]))
 
 
 def process(mapping, idf_dict, path, db_password, drop):
@@ -291,13 +290,14 @@ def process(mapping, idf_dict, path, db_password, drop):
     step = current = 0.005
     database_error_count = 0
     for index, file in enumerate(all_xmls):
-        # log_info('Processor', 'Processing {}'.format(file))
+        log_info('Processor', 'Processing {}'.format(file))
         entry = analyze(mapping, file)
-        try:
-            insert_into_database(database, idf_dict, entry)
-        except MySQLdb.DatabaseError as error:
-            database_error_count += 1
-            log_info('Debug', 'Insert error: {} at file {}'.format(error, file))
+        insert_into_database(database, idf_dict, entry)
+        # try:
+        #     insert_into_database(database, idf_dict, entry)
+        # except MySQLdb.DatabaseError as error:
+        #     database_error_count += 1
+        #     log_info('Debug', 'Insert error: {} at file {}'.format(error, file))
         if (index + 1) / total >= current:
             log_info('Processor', '{:.2f}% completed'.format(current * 100))
             current += step
