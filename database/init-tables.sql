@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS Cases    # 案件数据库
+CREATE TABLE IF NOT EXISTS Cases # 案件数据库
 (
     `id`     INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `judges` TEXT         NULL,     # 法官，考虑到一对多关系，倒排索引需单独建表
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS WordIndex # 词倒排索引数据库（一对多）, 
     `caseId` INT UNSIGNED NOT NULL, # Foreign key 指向案件
     `weight` FLOAT        NOT NULL, # 将利用出现词的个数等等进行简单的计算
     FOREIGN KEY (`caseId`) REFERENCES Cases (`id`),
-    INDEX (`word`)
+    UNIQUE INDEX `idx` (`word`, `caseId`)
 ) CHAR SET utf8;
 CREATE TABLE IF NOT EXISTS JudgeIndex
 (
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS JudgeIndex
     `caseId` INT UNSIGNED NOT NULL, # Foreign key 指向案件
     `weight` FLOAT        NOT NULL, # 将利用出现法官出现顺序等等进行简单的计算
     FOREIGN KEY (`caseId`) REFERENCES Cases (`id`),
-    INDEX (`judge`)
+    UNIQUE INDEX judge_index (`judge`)
 ) CHAR SET utf8;
 CREATE TABLE IF NOT EXISTS LawIndex
 (
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS LawIndex
     `caseId` INT UNSIGNED NOT NULL, # Foreign key 指向案件
     `weight` FLOAT        NOT NULL, # 将利用出现法律的个数等等进行简单的计算
     FOREIGN KEY (`caseId`) REFERENCES Cases (`id`),
-    INDEX (`law`)
+    INDEX law_index (`law`)
 ) CHAR SET utf8;
 CREATE TABLE IF NOT EXISTS TagIndex
 (
@@ -38,5 +38,5 @@ CREATE TABLE IF NOT EXISTS TagIndex
     `caseId` INT UNSIGNED NOT NULL, # Foreign key 指向案件
     `weight` FLOAT        NOT NULL, # 一些重要的标签和 jieba 分词的 topK 功能
     FOREIGN KEY (`caseId`) REFERENCES Cases (`id`),
-    INDEX (tag)
+    INDEX tag_index (`tag`)
 ) CHAR SET utf8;
