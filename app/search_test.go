@@ -280,7 +280,8 @@ func Test_mergeSearchResult(t *testing.T) {
 }
 
 func dbPrologue() database {
-	db, err := newDatabase()
+	password := GetEnvVar("PASSWORD", "")
+	db, err := newDatabase(password)
 	if err != nil {
 		panic(err)
 	}

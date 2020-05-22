@@ -9,12 +9,12 @@ import (
 
 type database struct {
 	*sql.DB
+	password string
 }
 
-func newDatabase() (database, error) {
-	password := GetEnvVar("PASSWORD", "")
+func newDatabase(password string) (database, error) {
 	db, err := sql.Open("mysql", strings.Replace(dataSourceName, "<password>", password, 1))
-	return database{db}, err
+	return database{db, password}, err
 }
 
 // Execute a db command, panic if error occurs

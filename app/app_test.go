@@ -165,7 +165,8 @@ func Get(path string, router *gin.Engine) []byte {
 
 func appPrologue() *App {
 	dbPrologue()
-	app := NewApp()
+	password := GetEnvVar("PASSWORD", "")
+	app := NewApp(password)
 	// language=MySQL
 	app.db.mustExec("USE ElasticJury_test")
 	return app

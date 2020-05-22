@@ -11,9 +11,9 @@ type App struct {
 }
 
 // Return a new app instance
-func NewApp() *App {
+func NewApp(password string) *App {
 	// Setup db:
-	db, err := newDatabase()
+	db, err := newDatabase(password)
 	if err != nil {
 		panic(err)
 	}
