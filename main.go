@@ -9,6 +9,7 @@ import (
 
 func main() {
 	natural.Initialize()
+	defer natural.Finalize()
 
 	// Parse environment variables:
 	password := common.GetEnvVar("PASSWORD", "")
