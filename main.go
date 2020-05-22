@@ -2,13 +2,17 @@ package main
 
 import (
 	"ElasticJury/app"
+	"ElasticJury/app/common"
+	"ElasticJury/app/natural"
 	"log"
 )
 
 func main() {
+	natural.Initialize()
+
 	// Parse environment variables:
-	password := app.GetEnvVar("PASSWORD", "")
-	port := app.GetEnvVar("PORT", "8000")
+	password := common.GetEnvVar("PASSWORD", "")
+	port := common.GetEnvVar("PORT", "8000")
 
 	searchEngine := app.NewApp(password)
 	// Listen and Server in localhost

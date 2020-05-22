@@ -19,7 +19,7 @@
     <div class="mx-auto my-5 search-box">
       <ChipTextInput
               placeholder="全文检索词..."
-              icon="mdi-magnify"
+              icon="mdi-feature-search-outline"
               v-model="words.inputs"
               :candidates="words.candidates"
       />
@@ -41,6 +41,15 @@
               v-model="tags.inputs"
               :candidates="tags.candidates"
       />
+      <v-textarea
+              filled
+              clearable
+              label="综合搜索..."
+              prepend-inner-icon="mdi-search-web"
+              row-height="0"
+              auto-grow
+              v-model="misc.inputs"
+      ></v-textarea>
     </div>
 
     <v-row justify="center" class="mb-2">
@@ -134,6 +143,9 @@
                 inputs: [],
                 candidates: ['民事案件', '一审案件'],
             },
+            misc: {
+                inputs: "",
+            },
             result: {
                 ids: [],
                 weights: [],
@@ -147,7 +159,7 @@
             },
             searchAble() {
                 return this.words.inputs.length > 0 || this.judges.inputs.length > 0 ||
-                    this.laws.inputs.length > 0 || this.tags.inputs.length > 0
+                    this.laws.inputs.length > 0 || this.tags.inputs.length > 0 || this.misc.inputs.length > 0
             },
             resultLength() {
                 return this.result.ids.length
@@ -193,12 +205,14 @@
             },
             async doSearch() {
                 this.loading = true;
+                console.log(this.misc.inputs)
                 let resp = await searchCaseId(
                     this.words.inputs,
                     this.judges.inputs,
                     this.laws.inputs,
                     this.tags.inputs,
-                    this.mode
+                    this.mode,
+                    this.misc.inputs,
                 )
                 if (resp.count === 0) {
                     // no result:

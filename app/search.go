@@ -1,8 +1,11 @@
 package app
 
 import (
+	. "ElasticJury/app/common"
+	"ElasticJury/app/natural"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -21,14 +24,43 @@ var (
 	emptySearchResponse = searchResultSet{}.toResponse()
 )
 
+// Handle search case id by words/tags/laws/judges
+// Method: POST
+//
+// Queries:
+// 		word: "调解,当事人,..." separated by ','
+// 		tags: "民事案件,一审案件,..." separated by ','
+// 		laws: "中华人民共和国民法通则,《中华人民共和国担保法》,..." separated by ','  quoted by '《》' or not
+// 		judges: "黄琴英,高原,..." separated by ','
+//
+// Params(json):
+//      misc: miscellaneous searching field, a text representing a case description. This field will be automatically
+//			divided into the four fields above for searching.
+//
 func (db database) makeSearchHandler() gin.HandlerFunc {
 	return func(context *gin.Context) {
-		// Parse queries:
-		words := PreprocessWords(strings.Split(context.Query("word"), ","))
+		// Parse queries and params:
+		words := natural.PreprocessWords(strings.Split(context.Query("word"), ","))
 		tags := FilterStrs(strings.Split(context.Query("tag"), ","), NotWhiteSpace)
 		laws := FilterStrs(strings.Split(context.Query("law"), ","), NotWhiteSpace)
 		judges := FilterStrs(strings.Split(context.Query("judge"), ","), NotWhiteSpace)
-		var mode bool
+		var json struct {
+			Misc string `json:"misc" form:"misc"`
+		}
+		if err := context.BindJSON(&json); err != nil && err != io.EOF { // parsing from post data
+			_ = context.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+		if NotWhiteSpace(json.Misc) {
+			// Parse misc text and output it into the four fields
+			words_, tags_, laws_, judges_ := natural.ParseFullText(json.Misc)
+			words = append(words, words_...)
+			tags = append(tags, tags_...)
+			laws = append(laws, laws_...)
+			judges = append(judges, judges_...)
+		}
+
+		var mode bool // fixme: this is deprecated now
 		if context.Query("mode") == "OR" {
 			mode = modeOr
 		} else {
@@ -44,7 +76,6 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		if len(words) > 0 {
 			result, err = db.searchCaseIdsByWord(words, mode)
 			if err != nil {
-				context.Status(http.StatusInternalServerError)
 				panic(err)
 			}
 			if len(result) == 0 { // early stop with empty response
@@ -55,7 +86,6 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		if len(tags) > 0 {
 			newResult, err = db.searchCaseIdsByTag(tags, mode)
 			if err != nil {
-				context.Status(http.StatusInternalServerError)
 				panic(err)
 			}
 			result = newResult.merge(result)
@@ -67,7 +97,6 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		if len(laws) > 0 {
 			newResult, err = db.searchCaseIdsByLaw(laws, mode)
 			if err != nil {
-				context.Status(http.StatusInternalServerError)
 				panic(err)
 			}
 			result = newResult.merge(result)
@@ -79,7 +108,6 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		if len(judges) > 0 {
 			newResult, err = db.searchCaseIdsByJudge(judges, mode)
 			if err != nil {
-				context.Status(http.StatusInternalServerError)
 				panic(err)
 			}
 			result = newResult.merge(result)
@@ -96,7 +124,7 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 	return func(context *gin.Context) {
 		idQuery := context.Query("id")
 		ids := strings.Split(idQuery, ",")
-		for _, id := range ids { // id check
+		for _, id := range ids { // id check (avoid injection e.t.c.)
 			if _, err := strconv.ParseInt(id, 10, 64); err != nil {
 				context.String(http.StatusBadRequest, "Bad `id` query \"%id\".", id)
 				return
@@ -104,7 +132,6 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 		}
 		rows, err := db.Query(fmt.Sprintf("SELECT id, judges, laws, tags, detail FROM Cases WHERE id IN (%s) ORDER BY FIELD(id, %s)", idQuery, idQuery))
 		if err != nil {
-			context.Status(http.StatusInternalServerError)
 			panic(err)
 		}
 		result := make([]gin.H, 0, len(ids))
@@ -114,7 +141,6 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 				judges, laws, tags, detail string
 			)
 			if err := rows.Scan(&id, &judges, &laws, &tags, &detail); err != nil {
-				context.Status(http.StatusInternalServerError)
 				panic(err)
 			}
 			result = append(result, gin.H{

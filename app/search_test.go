@@ -1,6 +1,7 @@
 package app
 
 import (
+	"ElasticJury/app/common"
 	"reflect"
 	"testing"
 )
@@ -280,7 +281,7 @@ func Test_mergeSearchResult(t *testing.T) {
 }
 
 func dbPrologue() database {
-	password := GetEnvVar("PASSWORD", "")
+	password := common.GetEnvVar("PASSWORD", "")
 	db, err := newDatabase(password)
 	if err != nil {
 		panic(err)
@@ -292,8 +293,8 @@ func dbPrologue() database {
 		db.mustExec("CREATE DATABASE ElasticJury_test DEFAULT CHARACTER SET utf8")
 		db.mustExec("USE ElasticJury_test")
 	}
-	db.mustExecScriptFile(initTableScriptPath)
-	db.mustExecScriptFile(initTestDataScriptPath)
+	db.mustExecScriptFile(common.InitTableScriptPath)
+	db.mustExecScriptFile(common.InitTestDataScriptPath)
 	return db
 }
 

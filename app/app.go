@@ -1,6 +1,7 @@
 package app
 
 import (
+	. "ElasticJury/app/common"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -22,7 +23,7 @@ func NewApp(password string) *App {
 		// Create and use `ElasticJury`
 		db.mustExec("CREATE DATABASE IF NOT EXISTS ElasticJury DEFAULT CHARACTER SET utf8")
 		db.mustExec("USE ElasticJury")
-		db.mustExecScriptFile(initTableScriptPath)
+		db.mustExecScriptFile(InitTableScriptPath)
 	}
 	println("Database initialized.")
 
@@ -36,7 +37,7 @@ func NewApp(password string) *App {
 			context.String(http.StatusOK, "pong")
 		})
 		// Retrieve case id by word, tag, law, judge
-		router.GET("/search", db.makeSearchHandler())
+		router.POST("/search", db.makeSearchHandler())
 		// Retrieve case info by case id
 		router.GET("/case", db.makeCaseInfoHandler())
 	}

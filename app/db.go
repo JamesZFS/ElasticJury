@@ -1,6 +1,7 @@
 package app
 
 import (
+	"ElasticJury/app/common"
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"io/ioutil"
@@ -13,7 +14,7 @@ type database struct {
 }
 
 func newDatabase(password string) (database, error) {
-	db, err := sql.Open("mysql", strings.Replace(dataSourceName, "<password>", password, 1))
+	db, err := sql.Open("mysql", strings.Replace(common.DataSourceName, "<password>", password, 1))
 	return database{db, password}, err
 }
 
