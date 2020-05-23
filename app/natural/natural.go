@@ -41,7 +41,16 @@ func Finalize() {
 
 func PreprocessWord(word string) string {
 	word = strings.TrimSpace(word)
-	// TODO stem word ?
+	escaped := make([]int32, 0, len(word))
+	for _, c := range word { // escape
+		switch c {
+		case '\'', '"', '`', '\\':
+			// ignore
+		default:
+			escaped = append(escaped, c)
+		}
+	}
+	word = string(escaped)
 	if _, isStopWord := stopWords[word]; isStopWord {
 		//fmt.Println("Found stop word: ", word)
 		return ""
