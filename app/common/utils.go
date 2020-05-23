@@ -30,3 +30,12 @@ func NotWhiteSpace(str string) bool {
 		return true
 	}
 }
+
+func IndexOfStr(strs []string, target string) int {
+	for i, str := range strs {
+		if str == target {
+			return i
+		}
+	}
+	return -1
+}

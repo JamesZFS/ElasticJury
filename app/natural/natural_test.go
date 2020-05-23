@@ -1,6 +1,7 @@
 package natural
 
 import (
+	. "ElasticJury/app/common"
 	"testing"
 )
 
@@ -86,7 +87,7 @@ func TestParseFullText(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotWords, gotTags, gotLaws, gotJudges := ParseFullText(tt.args.text)
-			if !Equal(gotWords, tt.wantWords) {
+			if !subSet(tt.wantWords, gotWords) {
 				t.Errorf("ParseFullText() gotWords = %v, want %v", gotWords, tt.wantWords)
 			}
 			if !Equal(gotTags, tt.wantTags) {
@@ -100,6 +101,15 @@ func TestParseFullText(t *testing.T) {
 			}
 		})
 	}
+}
+
+func subSet(words1 []string, words2 []string) bool {
+	for _, w := range words1 {
+		if IndexOfStr(words2, w) < 0 { // not found
+			return false
+		}
+	}
+	return true
 }
 
 // Equal tells whether a and b contain the same elements.

@@ -110,7 +110,7 @@ func ParseFullText(text string) (words []string, tags []string, laws []string, j
 	normalText := string(normalBuffer)
 	wordsDone := make(chan Void)
 	go func() {
-		words = PreprocessWords(jieba.Cut(normalText, useHmm))
+		words = PreprocessWords(jieba.CutForSearch(normalText, useHmm))
 		wordsDone <- Voidance
 	}()
 	tags = make([]string, 0)
