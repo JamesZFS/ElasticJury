@@ -53,10 +53,6 @@
     </div>
 
     <v-row justify="center" class="mb-2">
-      <v-radio-group v-model="mode" row class="mt-1 mr-8">
-        <v-radio label="And" value="AND"/>
-        <v-radio label="Or" value="OR"/>
-      </v-radio-group>
       <v-btn @click="onSearch" color="primary" :disabled="!searchAble">Search</v-btn>
       <v-btn @click="onPing" class="ml-10" color="secondary">Ping</v-btn>
     </v-row>
@@ -126,7 +122,6 @@
             casesPerPage: 10,
             notFoundTip: false,
             foundTip: false,
-            mode: 'AND',
             words: {
                 inputs: [],
                 candidates: ['调解', '协议', '当事人'],
@@ -192,7 +187,6 @@
                 this.judges.inputs = query.judge ? query.judge.split(',') : []
                 this.laws.inputs = query.law ? query.law.split(',') : []
                 this.tags.inputs = query.tag ? query.tag.split(',') : []
-                this.mode = query.mode || 'AND'
             },
             dumpParams() {
                 let query = {};
@@ -200,7 +194,6 @@
                 if (this.judges.inputs.length > 0) query.judge = this.judges.inputs.join(',')
                 if (this.laws.inputs.length > 0) query.law = this.laws.inputs.join(',')
                 if (this.tags.inputs.length > 0) query.tag = this.tags.inputs.join(',')
-                query.mode = this.mode
                 return query
             },
             async doSearch() {
@@ -211,7 +204,6 @@
                     this.judges.inputs,
                     this.laws.inputs,
                     this.tags.inputs,
-                    this.mode,
                     this.misc.inputs,
                 )
                 if (resp.count === 0) {

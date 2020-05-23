@@ -15,14 +15,8 @@ type (
 	searchResultSet map[int]float32 // caseId -> weight
 )
 
-const (
-	modeAnd = false // Intersect search results, default
-	modeOr  = true  // Union search results
-)
-
 var (
 	emptySearchResponse = searchResultSet{}.toResponse()
-	turn                = false
 )
 
 // Handle search case id by words/tags/laws/judges
@@ -61,13 +55,6 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			judges = append(judges, judges_...)
 		}
 
-		var mode bool // fixme: this is deprecated now
-		if context.Query("mode") == "OR" {
-			mode = modeOr
-		} else {
-			mode = modeAnd
-		}
-
 		// Perform searching for each field:
 		var (
 			result    searchResultSet
@@ -75,19 +62,12 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			err       error
 		)
 		if len(words) > 0 {
-			// TODO: why is this so magical?
-			if turn {
-				println("Using new method")
-				wordWeightMap := map[string]float32{}
-				for _, word := range words {
-					wordWeightMap[word] = 1.0 // TODO
-				}
-				result, err = db.searchCaseIdsByWordWeightMap(wordWeightMap)
-			} else {
-				println("Using old method")
-				result, err = db.searchCaseIdsByWord(words, mode)
+			println("Using new method")
+			wordWeightMap := map[string]float32{}
+			for _, word := range words {
+				wordWeightMap[word] = 1.0 // TODO
 			}
-			turn = !turn
+			result, err = db.searchCaseIdsByWordWeightMap(wordWeightMap, WordSearchLimit)
 			if err != nil {
 				panic(err)
 			}
@@ -96,8 +76,8 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 				return
 			}
 		}
-		if len(tags) > 0 {
-			newResult, err = db.searchCaseIdsByTag(tags, mode)
+		if len(tags) > 0 { //  todo: maybe we do refined search in word search result set
+			newResult, err = db.searchCaseIdsByTag(tags)
 			if err != nil {
 				panic(err)
 			}
@@ -108,7 +88,7 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			}
 		}
 		if len(laws) > 0 {
-			newResult, err = db.searchCaseIdsByLaw(laws, mode)
+			newResult, err = db.searchCaseIdsByLaw(laws)
 			if err != nil {
 				panic(err)
 			}
@@ -119,7 +99,7 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			}
 		}
 		if len(judges) > 0 {
-			newResult, err = db.searchCaseIdsByJudge(judges, mode)
+			newResult, err = db.searchCaseIdsByJudge(judges)
 			if err != nil {
 				panic(err)
 			}
@@ -168,10 +148,10 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 	}
 }
 
-func (db database) searchBy(querySql string, keys []string, mode bool) (searchResultSet, error) {
+// Or mode
+func (db database) searchBy(querySql string, keys []string) (searchResultSet, error) {
 	result := searchResultSet{}
-	for i, key := range keys { // query each key in `WordIndex` table
-		newResult := searchResultSet{}
+	for _, key := range keys { // query each key in `WordIndex` table
 		rows, err := db.Query(querySql, key)
 		if err != nil {
 			return nil, err
@@ -184,36 +164,19 @@ func (db database) searchBy(querySql string, keys []string, mode bool) (searchRe
 			if err := rows.Scan(&caseId, &weight); err != nil {
 				return nil, err
 			}
-			if mode == modeAnd {
-				if i == 0 {
-					newResult[caseId] = weight
-				} else {
-					oldWeight, contains := result[caseId]
-					if contains {
-						newResult[caseId] = oldWeight + weight
-					}
-				}
-			} else { // modeOr
-				result[caseId] += weight
-			}
-		}
-		if mode == modeAnd {
-			result = newResult
-			if len(result) == 0 { // early stop if empty
-				return result, nil
-			}
+			result[caseId] += weight
 		}
 	}
 	return result, nil
 }
 
-func (db database) searchCaseIdsByWord(words []string, mode bool) (searchResultSet, error) {
+func (db database) searchCaseIdsByWord(words []string) (searchResultSet, error) {
 	// language=MySQL
-	return db.searchBy("SELECT `caseId`, `weight` FROM WordIndex WHERE `word` = ?", words, mode)
+	return db.searchBy("SELECT `caseId`, `weight` FROM WordIndex WHERE `word` = ? LIMIT ?", words)
 }
 
 // Input: word(user input) -> weight(input word count or idf)
-func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32) (searchResultSet, error) {
+func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32, limit int) (searchResultSet, error) {
 	if _, err := db.Exec(`
 	CREATE TEMPORARY TABLE WordWeight
 	(
@@ -238,7 +201,7 @@ func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32
 	rows, err := db.Query(`
 	select a.caseId as caseId, sum(a.weight * b.weight) as weight
 	from WordIndex a, WordWeight b where a.word = b.word and a.word in (` + strings.Join(items, ",") + `) 
-	group by caseId order by weight desc`)
+	group by caseId order by weight desc limit ` + strconv.Itoa(limit))
 	if err != nil {
 		return nil, err
 	}
@@ -257,19 +220,19 @@ func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32
 	return result, err
 }
 
-func (db database) searchCaseIdsByTag(tags []string, mode bool) (searchResultSet, error) {
+func (db database) searchCaseIdsByTag(tags []string) (searchResultSet, error) {
 	// language=MySQL
-	return db.searchBy("SELECT `caseId`, `weight` FROM TagIndex WHERE `tag` = ?", tags, mode)
+	return db.searchBy("SELECT `caseId`, `weight` FROM TagIndex WHERE `tag` = ?", tags)
 }
 
-func (db database) searchCaseIdsByLaw(laws []string, mode bool) (searchResultSet, error) {
+func (db database) searchCaseIdsByLaw(laws []string) (searchResultSet, error) {
 	// language=MySQL
-	return db.searchBy("SELECT `caseId`, `weight` FROM LawIndex WHERE `law` = ?", laws, mode)
+	return db.searchBy("SELECT `caseId`, `weight` FROM LawIndex WHERE `law` = ?", laws)
 }
 
-func (db database) searchCaseIdsByJudge(judges []string, mode bool) (searchResultSet, error) {
+func (db database) searchCaseIdsByJudge(judges []string) (searchResultSet, error) {
 	// language=MySQL
-	return db.searchBy("SELECT `caseId`, `weight` FROM JudgeIndex WHERE `judge` = ?", judges, mode)
+	return db.searchBy("SELECT `caseId`, `weight` FROM JudgeIndex WHERE `judge` = ?", judges)
 }
 
 // Intersect search results, nil set stands for **full set**
