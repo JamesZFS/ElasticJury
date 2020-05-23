@@ -2,7 +2,9 @@ package app
 
 import (
 	. "ElasticJury/app/common"
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/go-sql-driver/mysql"
 	"net/http"
 )
 
@@ -11,20 +13,31 @@ type App struct {
 	db database
 }
 
-// Return a new app instance
-func NewApp(password string) *App {
+// Return a new app instance.
+// This method will init the database and tables if the database is not found.
+// Panics if an unknown db error occurs.
+func NewApp(databaseName, password string) *App {
 	// Setup db:
-	db, err := newDatabase(password)
+	db, err := newDatabase(databaseName, password)
 	if err != nil {
-		panic(err)
+		if err, ok := err.(*mysql.MySQLError); ok && err.Number == 1049 { // unknown database
+			fmt.Printf("Creating and reconnecting to %s", databaseName)
+			// Create and use `ElasticJury`
+			dbRoot, err := newDatabase("", password) // as root
+			if err != nil {
+				panic(err)
+			}
+			dbRoot.mustExec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s DEFAULT CHARACTER SET utf8", databaseName))
+			db, err = newDatabase(databaseName, password)
+			if err != nil {
+				panic(err)
+			}
+			db.mustExecScriptFile(InitTableScriptPath)
+		} else {
+			panic(err) // unknown err
+		}
 	}
-	// language=MySQL
-	{
-		// Create and use `ElasticJury`
-		db.mustExec("CREATE DATABASE IF NOT EXISTS ElasticJury DEFAULT CHARACTER SET utf8")
-		db.mustExec("USE ElasticJury")
-		db.mustExecScriptFile(InitTableScriptPath)
-	}
+
 	println("Database initialized.")
 
 	// Setup router:

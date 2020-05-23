@@ -15,7 +15,7 @@ func main() {
 	password := common.GetEnvVar("PASSWORD", "")
 	port := common.GetEnvVar("PORT", "8000")
 
-	searchEngine := app.NewApp(password)
+	searchEngine := app.NewApp(common.AppDatabaseName, password)
 	// Listen and Server in localhost
 	log.Fatal(searchEngine.Run("localhost:" + port))
 }

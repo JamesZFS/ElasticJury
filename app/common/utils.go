@@ -5,9 +5,6 @@ import (
 	"strings"
 )
 
-// A zero-sized type
-type Void struct{}
-
 func GetEnvVar(key string, dft string) string {
 	if val, ok := os.LookupEnv(key); ok {
 		return val

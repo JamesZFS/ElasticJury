@@ -1,8 +1,9 @@
 package app
 
 import (
-	"ElasticJury/app/common"
+	. "ElasticJury/app/common"
 	"database/sql"
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"io/ioutil"
 	"strings"
@@ -10,12 +11,17 @@ import (
 
 type database struct {
 	*sql.DB
-	password string
 }
 
-func newDatabase(password string) (database, error) {
-	db, err := sql.Open("mysql", strings.Replace(common.DataSourceName, "<password>", password, 1))
-	return database{db, password}, err
+func newDatabase(databaseName, password string) (database, error) {
+	dataSourceName := strings.Replace(strings.Replace(DataSourceName, "<password>", password, 1), "<database>", databaseName, 1)
+	fmt.Printf("Using data source: %s\n", dataSourceName)
+	db, err := sql.Open("mysql", dataSourceName)
+	if err == nil {
+		db.SetConnMaxLifetime(DBConnMaxLifeTime)
+		err = db.Ping() // test if actually connected
+	}
+	return database{db}, err
 }
 
 // Execute a db command, panic if error occurs

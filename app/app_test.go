@@ -1,7 +1,7 @@
 package app
 
 import (
-	"ElasticJury/app/common"
+	. "ElasticJury/app/common"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -166,10 +166,8 @@ func Request(method string, path string, router *gin.Engine) []byte {
 
 func appPrologue() *App {
 	dbPrologue()
-	password := common.GetEnvVar("PASSWORD", "")
-	app := NewApp(password)
-	// language=MySQL
-	app.db.mustExec("USE ElasticJury_test")
+	password := GetEnvVar("PASSWORD", "")
+	app := NewApp(TestDatabaseName, password)
 	return app
 }
 
