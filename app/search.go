@@ -22,6 +22,7 @@ const (
 
 var (
 	emptySearchResponse = searchResultSet{}.toResponse()
+	turn                = false
 )
 
 // Handle search case id by words/tags/laws/judges
@@ -74,7 +75,19 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			err       error
 		)
 		if len(words) > 0 {
-			result, err = db.searchCaseIdsByWord(words, mode)
+			// TODO: why is this so magical?
+			if turn {
+				println("Using new method")
+				wordWeightMap := map[string]float32{}
+				for _, word := range words {
+					wordWeightMap[word] = 1.0 // TODO
+				}
+				result, err = db.searchCaseIdsByWordWeightMap(wordWeightMap)
+			} else {
+				println("Using old method")
+				result, err = db.searchCaseIdsByWord(words, mode)
+			}
+			turn = !turn
 			if err != nil {
 				panic(err)
 			}
@@ -197,6 +210,51 @@ func (db database) searchBy(querySql string, keys []string, mode bool) (searchRe
 func (db database) searchCaseIdsByWord(words []string, mode bool) (searchResultSet, error) {
 	// language=MySQL
 	return db.searchBy("SELECT `caseId`, `weight` FROM WordIndex WHERE `word` = ?", words, mode)
+}
+
+// Input: word(user input) -> weight(input word count or idf)
+func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32) (searchResultSet, error) {
+	if _, err := db.Exec(`
+	CREATE TEMPORARY TABLE WordWeight
+	(
+		word   VARCHAR(64) NOT NULL, # 用户输入的查询词
+		weight FLOAT       NOT NULL, # 用户输入的词的权重（idf或者输入词的次数）
+		PRIMARY KEY (word)           # 一对一映射
+	) CHAR SET utf8;`); err != nil {
+		return nil, err
+	}
+	items := make([]string, 0, len(wordWeightMap))
+	for word, weight := range wordWeightMap {
+		items = append(items, fmt.Sprintf("('%s',%f)", word, weight))
+	}
+	if _, err := db.Exec(`INSERT INTO WordWeight (word, weight) VALUES ` + strings.Join(items, ",")); err != nil {
+		return nil, err
+	}
+	// 按照 WordWeight 表中的词权重进行检索、求和、排序
+	items = items[:0] // clear
+	for word := range wordWeightMap {
+		items = append(items, "'"+word+"'")
+	}
+	rows, err := db.Query(`
+	select a.caseId as caseId, sum(a.weight * b.weight) as weight
+	from WordIndex a, WordWeight b where a.word = b.word and a.word in (` + strings.Join(items, ",") + `) 
+	group by caseId order by weight desc`)
+	if err != nil {
+		return nil, err
+	}
+	result := searchResultSet{}
+	for rows.Next() {
+		var (
+			caseId int
+			weight float32
+		)
+		if err := rows.Scan(&caseId, &weight); err != nil {
+			return nil, err
+		}
+		result[caseId] = weight
+	}
+	_, err = db.Exec(`DROP TABLE WordWeight`)
+	return result, err
 }
 
 func (db database) searchCaseIdsByTag(tags []string, mode bool) (searchResultSet, error) {
