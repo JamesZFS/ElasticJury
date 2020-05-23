@@ -61,7 +61,6 @@
     <CaseList
             v-else
             :items="result.infos"
-            :weights="result.weightsToDisplay"
             @click="onClickCase"
     />
     <v-pagination
@@ -143,9 +142,7 @@
             },
             result: {
                 ids: [],
-                weights: [],
                 infos: [],
-                weightsToDisplay: [],
             }
         }),
         computed: {
@@ -178,7 +175,6 @@
                 // load results when page changes
                 let idsToLoad = this.result.ids.slice((this.curPage - 1) * this.casesPerPage, this.curPage * this.casesPerPage)
                 let resp = await getCaseInfo(idsToLoad)
-                this.result.weightsToDisplay = this.result.weights.slice((this.curPage - 1) * this.casesPerPage, this.curPage * this.casesPerPage)
                 this.result.infos = Object.values(resp)
                 this.loading = false
             },
@@ -212,15 +208,7 @@
                     this.result.infos = []
                     this.notFoundTip = true
                 } else {
-                    let pairs = Object.entries(resp.result)
-                        // eslint-disable-next-line
-                        .sort(([_id1, weight1], [_id2, weight2]) => weight2 - weight1) // sort by weight desc
-                    this.result.ids = []
-                    this.result.weights = []
-                    pairs.forEach(([id, weight]) => {
-                        this.result.ids.push(parseInt(id))
-                        this.result.weights.push(weight)
-                    })
+                    this.result.ids = resp.result
                     await this.setPage(1)
                     this.foundTip = true
                 }

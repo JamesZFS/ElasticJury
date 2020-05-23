@@ -11,14 +11,6 @@ import (
 	"strings"
 )
 
-type (
-	searchResultSet map[int]float32 // caseId -> weight
-)
-
-var (
-	emptySearchResponse = searchResultSet{}.toResponse()
-)
-
 // Handle search case id by words/tags/laws/judges
 // Method: POST
 //
@@ -65,14 +57,14 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			println("Using new method")
 			wordWeightMap := map[string]float32{}
 			for _, word := range words {
-				wordWeightMap[word] = 1.0 // TODO
+				wordWeightMap[word] = 1.0 // TODO, maybe use
 			}
 			result, err = db.searchCaseIdsByWordWeightMap(wordWeightMap, WordSearchLimit)
 			if err != nil {
 				panic(err)
 			}
 			if len(result) == 0 { // early stop with empty response
-				context.JSON(http.StatusOK, emptySearchResponse)
+				context.JSON(http.StatusOK, emptyResponse)
 				return
 			}
 		}
@@ -83,7 +75,7 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			}
 			result = newResult.merge(result)
 			if len(result) == 0 { // early stop with empty response
-				context.JSON(http.StatusOK, emptySearchResponse)
+				context.JSON(http.StatusOK, emptyResponse)
 				return
 			}
 		}
@@ -94,7 +86,7 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			}
 			result = newResult.merge(result)
 			if len(result) == 0 { // early stop with empty response
-				context.JSON(http.StatusOK, emptySearchResponse)
+				context.JSON(http.StatusOK, emptyResponse)
 				return
 			}
 		}
@@ -109,7 +101,7 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			result = searchResultSet{}
 		}
 
-		context.JSON(http.StatusOK, result.toResponse())
+		context.JSON(http.StatusOK, result.sortMapByValue().toResponse())
 	}
 }
 
@@ -151,7 +143,7 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 // Or mode
 func (db database) searchBy(querySql string, keys []string) (searchResultSet, error) {
 	result := searchResultSet{}
-	for _, key := range keys { // query each key in `WordIndex` table
+	for _, key := range keys { // query each caseId in `WordIndex` table
 		rows, err := db.Query(querySql, key)
 		if err != nil {
 			return nil, err
@@ -170,11 +162,13 @@ func (db database) searchBy(querySql string, keys []string) (searchResultSet, er
 	return result, nil
 }
 
+// Old method
 func (db database) searchCaseIdsByWord(words []string) (searchResultSet, error) {
 	// language=MySQL
-	return db.searchBy("SELECT `caseId`, `weight` FROM WordIndex WHERE `word` = ? LIMIT ?", words)
+	return db.searchBy("SELECT `caseId`, `weight` FROM WordIndex WHERE `word` = ?", words)
 }
 
+// New method
 // Input: word(user input) -> weight(input word count or idf)
 func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32, limit int) (searchResultSet, error) {
 	if _, err := db.Exec(`
@@ -216,10 +210,12 @@ func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32
 		}
 		result[caseId] = weight
 	}
+	//noinspection SqlResolve
 	_, err = db.Exec(`DROP TABLE WordWeight`)
 	return result, err
 }
 
+// todo: maybe we limit the tag/law/judge result count? like we do in words
 func (db database) searchCaseIdsByTag(tags []string) (searchResultSet, error) {
 	// language=MySQL
 	return db.searchBy("SELECT `caseId`, `weight` FROM TagIndex WHERE `tag` = ?", tags)
@@ -233,33 +229,4 @@ func (db database) searchCaseIdsByLaw(laws []string) (searchResultSet, error) {
 func (db database) searchCaseIdsByJudge(judges []string) (searchResultSet, error) {
 	// language=MySQL
 	return db.searchBy("SELECT `caseId`, `weight` FROM JudgeIndex WHERE `judge` = ?", judges)
-}
-
-// Intersect search results, nil set stands for **full set**
-func (s searchResultSet) merge(t searchResultSet) searchResultSet {
-	if s == nil {
-		return t
-	}
-	if t == nil {
-		return s
-	}
-	if len(t) < len(s) {
-		return t.merge(s)
-	}
-	// Assume len(s) <= len(t)
-	res := searchResultSet{}
-	for id, w1 := range s {
-		if w2, contains := t[id]; contains {
-			res[id] = w1 + w2 // TODO maybe other operations
-		}
-	}
-	return res
-}
-
-// To http response body
-func (s searchResultSet) toResponse() gin.H {
-	return gin.H{
-		"count":  len(s),
-		"result": s,
-	}
 }
