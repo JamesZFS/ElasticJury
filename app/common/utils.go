@@ -13,13 +13,13 @@ type Param struct {
 	Weights    []float32
 }
 
-func BuildParam(tableName, fieldName, query string) Param {
-	conditions := FilterStrs(strings.Split(query, ","), NotWhiteSpace)
+func BuildParam(tableName, fieldName string, querySegments []string) Param {
+	conditions := FilterStrs(querySegments, NotWhiteSpace)
 	weights := make([]float32, len(conditions))
 	for i := range weights {
 		weights[i] = 1.0
 	}
-	return Param {
+	return Param{
 		tableName,
 		fieldName,
 		conditions,
@@ -56,7 +56,7 @@ func NotWhiteSpace(str string) bool {
 func GetOrExpr(entry int32, field string, conditions []string) string {
 	var array []string
 	for _, condition := range conditions {
-		 array = append(array, fmt.Sprintf("%c.%s = '%s'", entry, field, condition))
+		array = append(array, fmt.Sprintf("%c.%s = '%s'", entry, field, condition))
 	}
 	return strings.Join(array, " OR ")
 }
