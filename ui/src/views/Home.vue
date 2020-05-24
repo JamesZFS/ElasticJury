@@ -37,7 +37,7 @@
       />
       <ChipTextInput
               placeholder="标签..."
-              icon="mdi-bookmark-multiple-outline"
+              icon="mdi-tag-multiple-outline"
               v-model="tags.inputs"
               :candidates="tags.candidates"
       />
@@ -174,8 +174,7 @@
                 this.curPage = page
                 // load results when page changes
                 let idsToLoad = this.result.ids.slice((this.curPage - 1) * this.casesPerPage, this.curPage * this.casesPerPage)
-                let resp = await getCaseInfo(idsToLoad)
-                this.result.infos = Object.values(resp)
+                this.result.infos = await getCaseInfo(idsToLoad)
                 this.loading = false
             },
             parseParams(query) {
