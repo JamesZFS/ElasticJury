@@ -4,6 +4,7 @@ import (
 	. "ElasticJury/app/common"
 	"ElasticJury/app/natural"
 	"fmt"
+	"math/rand"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
@@ -54,7 +55,6 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			err       error
 		)
 		if len(words) > 0 {
-			println("Using new method")
 			wordWeightMap := map[string]float32{}
 			for _, word := range words {
 				wordWeightMap[word] = 1.0 // TODO, maybe use
@@ -168,34 +168,41 @@ func (db database) searchCaseIdsByWord(words []string) (searchResultSet, error) 
 	return db.searchBy("SELECT `caseId`, `weight` FROM WordIndex WHERE `word` = ?", words)
 }
 
-// New method
 // Input: word(user input) -> weight(input word count or idf)
 func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32, limit int) (searchResultSet, error) {
-	if _, err := db.Exec(`
-	CREATE TEMPORARY TABLE WordWeight
-	(
-		word   VARCHAR(64) NOT NULL, # 用户输入的查询词
-		weight FLOAT       NOT NULL, # 用户输入的词的权重（idf或者输入词的次数）
-		PRIMARY KEY (word)           # 一对一映射
-	) CHAR SET utf8;`); err != nil {
+	// Create table
+	tableId := rand.Uint32()
+	createTable := fmt.Sprintf(`
+		CREATE TABLE WordWeight%d
+		(
+			word   VARCHAR(64) NOT NULL, # 用户输入的查询词
+			weight FLOAT       NOT NULL, # 用户输入的词的权重（idf或者输入词的次数）
+			PRIMARY KEY (word)           # 一对一映射
+		) CHAR SET utf8;`, tableId)
+	println(createTable)
+	if _, err := db.Exec(createTable); err != nil {
 		return nil, err
 	}
+
+	// Insert items
 	items := make([]string, 0, len(wordWeightMap))
 	for word, weight := range wordWeightMap {
 		items = append(items, fmt.Sprintf("('%s',%f)", word, weight))
 	}
-	if _, err := db.Exec(`INSERT INTO WordWeight (word, weight) VALUES ` + strings.Join(items, ",")); err != nil {
+	insert := fmt.Sprintf(`INSERT INTO WordWeight%d (word, weight) VALUES %s`, tableId, strings.Join(items, ","))
+	println(insert)
+	if _, err := db.Exec(insert); err != nil {
 		return nil, err
 	}
-	// 按照 WordWeight 表中的词权重进行检索、求和、排序
-	items = items[:0] // clear
-	for word := range wordWeightMap {
-		items = append(items, "'"+word+"'")
-	}
-	rows, err := db.Query(`
-	select a.caseId as caseId, sum(a.weight * b.weight) as weight
-	from WordIndex a, WordWeight b where a.word = b.word and a.word in (` + strings.Join(items, ",") + `) 
-	group by caseId order by weight desc limit ` + strconv.Itoa(limit))
+
+	// Search
+	query := fmt.Sprintf(`
+		select a.caseId as caseId, sum(a.weight * b.weight) as weight
+		from WordIndex a, WordWeight%d b
+		where a.word = b.word
+		group by caseId order by weight desc limit %d`, tableId, limit)
+	println(query)
+	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -210,8 +217,11 @@ func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32
 		}
 		result[caseId] = weight
 	}
-	//noinspection SqlResolve
-	_, err = db.Exec(`DROP TABLE WordWeight`)
+
+	// Drop table and return
+	drop := fmt.Sprintf(`DROP TABLE WordWeight%d`, tableId)
+	println(drop)
+	_, err = db.Exec(drop)
 	return result, err
 }
 

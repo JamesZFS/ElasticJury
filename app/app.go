@@ -43,6 +43,8 @@ func NewApp(databaseName, password string) *App {
 	// Setup router:
 	// Disable Console Color
 	// gin.DisableConsoleColor()
+	// Release mode is faster
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	{
 		// Ping test

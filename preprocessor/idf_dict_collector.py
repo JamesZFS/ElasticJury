@@ -11,7 +11,8 @@ parsing_error_count = 0
 
 
 def parse_words(text, idf_dict):
-    for word in set(jieba.lcut(text)):
+    words = set(map(lambda x: x.lower(), jieba.lcut(text)))
+    for word in words:
         count = idf_dict.get(word, 0)
         idf_dict[word] = count + 1
 
