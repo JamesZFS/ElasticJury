@@ -227,7 +227,8 @@
                 alert(resp)
             },
             onClickCase(id) {
-                window.open(`detail/${id}`, '_blank');
+                let routeData = this.$router.resolve(`detail/${id}`);
+                window.open(routeData.href, '_blank');
             },
         }
     }

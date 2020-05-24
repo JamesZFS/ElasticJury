@@ -1,86 +1,107 @@
 <template>
   <!-- 案件详情页 -->
   <v-container>
-    <v-app-bar
-            app
-            color="primary"
-            dark
-    >
-      <span class="headline">案件 {{id}}</span>
-      <v-spacer></v-spacer>
-      <div class="d-flex align-center">
-        <v-img
-                alt="Vuetify Logo"
-                class="shrink mr-2"
-                contain
-                src="https://cdn.vuetifyjs.com/images/logos/vuetify-logo-dark.png"
-                transition="scale-transition"
-                width="40"
-        />
-        <span class="headline">ElasticJury</span>
-      </div>
-    </v-app-bar>
-
     <v-card
             shaped
+            :elevation="5"
             class="my-4"
     >
-      <v-card-title class="justify-center">
+      <v-card-title class="justify-center headline">
         案件 {{id}}
       </v-card-title>
 
       <v-divider/>
 
-      <v-card-subtitle>
-        <span class="font-weight-bold">法官：</span>
-        <v-chip v-for="judge in judges" class="ma-1">
-          <v-avatar left>
-            <v-icon>mdi-account-circle</v-icon>
-          </v-avatar>
-          {{judge}}
-        </v-chip>
-      </v-card-subtitle>
-
-      <v-divider/>
-
-      <v-card-subtitle>
-        <span class="font-weight-bold">法条：</span>
-        <v-chip label v-for="law in laws" class="ma-1">
-          {{law}}
-        </v-chip>
-      </v-card-subtitle>
-
-      <v-divider/>
-
-      <v-card-subtitle>
-        <span class="font-weight-bold">标签：</span>
-        <v-chip label v-for="tag in tags" class="ma-1">
-          {{tag}}
-        </v-chip>
-      </v-card-subtitle>
-
-      <v-divider/>
-
-      <v-treeview
-              open-on-click
-              hoverable
-              :items="tree"
-              class="my-3"
+      <v-expansion-panels
+              v-model="openedPanels"
+              hover
+              multiple
+              accordion
+              class="mb-10"
       >
-        <template v-slot:prepend="{item, open}">
-          <v-icon v-if="item.children">
-            {{ open ? 'mdi-folder-open' : 'mdi-folder' }}
-          </v-icon>
-          <v-icon v-else>mdi-circle-medium</v-icon>
-        </template>
-        <template v-slot:label="{item}">
-          <!--    key-value pair      -->
-          <div v-if="item.attributes">
-            <span class="font-weight-bold">{{item.attributes.key}}</span>
-            <span v-if="item.attributes.value.trim().length > 0"> : {{item.attributes.value}}</span>
-          </div>
-        </template>
-      </v-treeview>
+        <v-expansion-panel>
+          <v-expansion-panel-header class="font-weight-bold">
+            法官
+          </v-expansion-panel-header>
+          <v-expansion-panel-content>
+            <v-chip v-for="judge in judges" class="ma-1">
+              <v-avatar left>
+                <v-icon>mdi-account-circle</v-icon>
+              </v-avatar>
+              {{judge}}
+            </v-chip>
+          </v-expansion-panel-content>
+        </v-expansion-panel>
+
+        <v-expansion-panel>
+          <v-expansion-panel-header class="font-weight-bold">
+            法条
+          </v-expansion-panel-header>
+          <v-expansion-panel-content>
+            <v-chip label v-for="law in laws" class="ma-1">
+              {{law}}
+            </v-chip>
+          </v-expansion-panel-content>
+        </v-expansion-panel>
+
+        <v-expansion-panel>
+          <v-expansion-panel-header class="font-weight-bold">
+            标签
+          </v-expansion-panel-header>
+          <v-expansion-panel-content>
+            <v-chip label v-for="tag in tags" class="ma-1">
+              {{tag}}
+            </v-chip>
+          </v-expansion-panel-content>
+        </v-expansion-panel>
+
+        <v-expansion-panel>
+          <v-expansion-panel-header class="font-weight-bold">
+            全文内容
+          </v-expansion-panel-header>
+          <v-expansion-panel-content>
+            <p>{{detail}}</p>
+          </v-expansion-panel-content>
+        </v-expansion-panel>
+
+        <v-expansion-panel>
+          <v-expansion-panel-header class="font-weight-bold">
+            案件结构
+          </v-expansion-panel-header>
+          <v-expansion-panel-content>
+            <v-row>
+              <v-col cols="8">
+                <v-treeview
+                        open-on-click
+                        dense
+                        :items="tree"
+                >
+                  <template v-slot:prepend="{item, open}">
+                    <v-icon v-if="item.children">
+                      {{ open ? 'mdi-folder-open' : 'mdi-folder' }}
+                    </v-icon>
+                    <v-icon v-else>mdi-circle-medium</v-icon>
+                  </template>
+                  <template v-slot:label="{item}">
+                    <!--    key-value pair      -->
+                    <div v-if="item.attributes" @click="onClickAttribute(item.attributes)">
+                      <span class="font-weight-bold">{{item.attributes.key}}</span>
+                      <span v-if="item.attributes.value.length > 0"> : {{item.attributes.value.slice(0, 20)}}</span>
+                      <span v-if="item.attributes.value.length > 20">...</span>
+                    </div>
+                  </template>
+                </v-treeview>
+              </v-col>
+              <v-divider vertical/>
+              <v-col>
+                <h3 class="font-weight-bold">{{sideView.header}}</h3>
+                <p>{{sideView.content}}</p>
+              </v-col>
+            </v-row>
+          </v-expansion-panel-content>
+        </v-expansion-panel>
+
+      </v-expansion-panels>
 
     </v-card>
   </v-container>
@@ -93,12 +114,17 @@
     export default {
         name: "Detail",
         data: () => ({
+            openedPanels: [0, 1, 2, 4],
             id: 0,
             judges: [],
             laws: [],
             tags: [],
             detail: '',
             tree: [], // xml tree parsed as js object
+            sideView: {
+                header: '',
+                content: '',
+            },
         }),
         async created() {
             // get case id from route path
@@ -111,10 +137,15 @@
                 ignoreComment: true,
                 elementsKey: 'children',
             }).children[0].children
+        },
+        methods: {
+            onClickAttribute(attr) {
+                this.sideView.header = attr.key
+                this.sideView.content = attr.value
+            }
         }
     }
 </script>
 
 <style scoped>
-
 </style>
