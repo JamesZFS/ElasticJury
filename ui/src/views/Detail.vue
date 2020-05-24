@@ -139,6 +139,7 @@
         async created() {
             // get case id from route path
             this.id = parseInt(this.$route.params.id)
+            document.title = `案件 ${this.id}`
             let data = await getCaseDetail(this.id)
             // convert xml tree into js object for display
             data.tree = xmlToTree(data.tree)

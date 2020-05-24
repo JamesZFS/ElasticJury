@@ -4,12 +4,12 @@
     <v-expand-transition>
       <div v-if="displayWelcome">
         <v-img
-                src="../assets/logo.svg"
-                class="my-3"
+                src="../assets/logo.png"
+                class="mt-5"
                 contain
-                height="200"
+                height="250"
         />
-        <v-row justify="center" align="center" style="height: 20vh">
+        <v-row justify="center" align="center" class="text-center" style="height: 20vh">
           <h1 class="display-2 font-weight-bold mb-3">
             Welcome to ElasticJury
           </h1>
