@@ -1,9 +1,24 @@
 package common
 
 import (
+	"fmt"
 	"os"
 	"strings"
 )
+
+type Filter struct {
+	TableName  string
+	FieldName string
+	Conditions []string
+}
+
+func BuildFilter(tableName, fieldName, query string) Filter {
+	return Filter{
+		tableName,
+		fieldName,
+		FilterStrs(strings.Split(query, ","), NotWhiteSpace),
+	}
+}
 
 func GetEnvVar(key string, dft string) string {
 	if val, ok := os.LookupEnv(key); ok {
@@ -29,6 +44,14 @@ func NotWhiteSpace(str string) bool {
 	} else {
 		return true
 	}
+}
+
+func GetOrExpr(entry int32, field string, conditions []string) string {
+	var array []string
+	for _, condition := range conditions {
+		 array = append(array, fmt.Sprintf("%c.%s = '%s'", entry, field, condition))
+	}
+	return strings.Join(array, " OR ")
 }
 
 func IndexOfStr(strs []string, target string) int {

@@ -28,11 +28,15 @@ import (
 //
 func (db database) makeSearchHandler() gin.HandlerFunc {
 	return func(context *gin.Context) {
-		// Parse queries and params:
+		// Parse params:
 		words := natural.PreprocessWords(strings.Split(context.Query("word"), ","))
-		tags := FilterStrs(strings.Split(context.Query("tag"), ","), NotWhiteSpace)
-		laws := FilterStrs(strings.Split(context.Query("law"), ","), NotWhiteSpace)
-		judges := FilterStrs(strings.Split(context.Query("judge"), ","), NotWhiteSpace)
+		filters := []Filter {
+			BuildFilter("TagIndex", "tag", context.Query("tag")),
+			BuildFilter("LawIndex", "law", context.Query("law")),
+			BuildFilter("JudgeIndex", "judge", context.Query("judge")),
+		}
+
+		// Parse content
 		var json struct {
 			Misc string `json:"misc" form:"misc"`
 		}
@@ -42,66 +46,20 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		}
 		if NotWhiteSpace(json.Misc) {
 			// Parse misc text and output it into the four fields
-			words_, tags_, laws_, judges_ := natural.ParseFullText(json.Misc)
-			words = append(words, words_...)
-			tags = append(tags, tags_...)
-			laws = append(laws, laws_...)
-			judges = append(judges, judges_...)
+			words = append(words, natural.ParseFullText(json.Misc)...)
 		}
 
-		// Perform searching for each field:
-		var (
-			result    searchResultSet
-			newResult searchResultSet
-			err       error
-		)
-		if len(words) > 0 {
-			wordWeightMap := map[string]float32{}
-			for _, word := range words {
-				wordWeightMap[word] = 1.0 // TODO, maybe use
-			}
-			result, err = db.searchCaseIdsByWordWeightMap(wordWeightMap, WordSearchLimit)
-			if err != nil {
-				panic(err)
-			}
-			if len(result) == 0 { // early stop with empty response
-				context.JSON(http.StatusOK, emptyResponse)
-				return
-			}
+		// Perform searching
+		wordWeightMap := map[string]float32{}
+		for _, word := range words {
+			wordWeightMap[word] = 1.0 // TODO: maybe use
 		}
-		if len(tags) > 0 { //  todo: maybe we do refined search in word search result set
-			newResult, err = db.searchCaseIdsByTag(tags)
-			if err != nil {
-				panic(err)
-			}
-			result = newResult.merge(result)
-			if len(result) == 0 { // early stop with empty response
-				context.JSON(http.StatusOK, emptyResponse)
-				return
-			}
-		}
-		if len(laws) > 0 {
-			newResult, err = db.searchCaseIdsByLaw(laws)
-			if err != nil {
-				panic(err)
-			}
-			result = newResult.merge(result)
-			if len(result) == 0 { // early stop with empty response
-				context.JSON(http.StatusOK, emptyResponse)
-				return
-			}
-		}
-		if len(judges) > 0 {
-			newResult, err = db.searchCaseIdsByJudge(judges)
-			if err != nil {
-				panic(err)
-			}
-			result = newResult.merge(result)
-		}
-		if result == nil {
-			result = searchResultSet{}
+		result, err := db.searchCaseIdsByWordWeightMap(wordWeightMap, filters, WordSearchLimit)
+		if err != nil {
+			panic(err)
 		}
 
+		// Return
 		context.JSON(http.StatusOK, result.sortMapByValue().toResponse())
 	}
 }
@@ -110,16 +68,25 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 	return func(context *gin.Context) {
 		idQuery := context.Query("id")
 		ids := strings.Split(idQuery, ",")
-		for _, id := range ids { // id check (avoid injection e.t.c.)
+
+		// Checks
+		for _, id := range ids {
 			if _, err := strconv.ParseInt(id, 10, 64); err != nil {
 				context.String(http.StatusBadRequest, "Bad `id` query \"%id\".", id)
 				return
 			}
 		}
-		rows, err := db.Query(fmt.Sprintf("SELECT id, judges, laws, tags, detail FROM Cases WHERE id IN (%s) ORDER BY FIELD(id, %s)", idQuery, idQuery))
+
+		// Query
+		rows, err := db.Query(fmt.Sprintf(`
+			SELECT id, judges, laws, tags, detail
+			FROM Cases WHERE id IN (%s)
+			ORDER BY FIELD(id, %s)`, idQuery, idQuery))
 		if err != nil {
 			panic(err)
 		}
+
+		// Return
 		result := make([]gin.H, 0, len(ids))
 		for rows.Next() {
 			var (
@@ -141,36 +108,8 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 	}
 }
 
-// Or mode
-func (db database) searchBy(querySql string, keys []string) (searchResultSet, error) {
-	result := searchResultSet{}
-	for _, key := range keys { // query each caseId in `WordIndex` table
-		rows, err := db.Query(querySql, key)
-		if err != nil {
-			return nil, err
-		}
-		for rows.Next() { // append new case to the result set
-			var (
-				caseId int
-				weight float32
-			)
-			if err := rows.Scan(&caseId, &weight); err != nil {
-				return nil, err
-			}
-			result[caseId] += weight
-		}
-	}
-	return result, nil
-}
-
-// Old method
-func (db database) searchCaseIdsByWord(words []string) (searchResultSet, error) {
-	// language=MySQL
-	return db.searchBy("SELECT `caseId`, `weight` FROM WordIndex WHERE `word` = ?", words)
-}
-
 // Input: word(user input) -> weight(input word count or idf)
-func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32, limit int) (result searchResultSet, err error) {
+func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32, filters []Filter, limit int) (result searchResultSet, err error) {
 	// Create table
 	tableId := time.Now().UnixNano()
 	createTable := fmt.Sprintf(`
@@ -181,14 +120,14 @@ func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32
 			PRIMARY KEY (word)           # 一对一映射
 		) CHAR SET utf8;`, tableId)
 	if _, err = db.Exec(createTable); err != nil {
-		return nil, err
+		return searchResultSet{}, err
 	}
 
 	// Drop after finish
 	defer func() {
 		drop := fmt.Sprintf(`DROP TABLE WordWeight%d`, tableId)
 		if _, err = db.Exec(drop); err != nil { // Overwrite return value
-			result = nil
+			result = searchResultSet{}
 		}
 	}()
 
@@ -199,19 +138,31 @@ func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32
 	}
 	insert := fmt.Sprintf(`INSERT INTO WordWeight%d (word, weight) VALUES %s`, tableId, strings.Join(items, ","))
 	if _, err = db.Exec(insert); err != nil {
-		return nil, err
+		return searchResultSet{}, err
+	}
+
+	// Convert filters into SQL conditions
+	tables, conditions, entryIndex := "", "", 'c'
+	for _, filter := range filters {
+		if len(filter.Conditions) > 0 {
+			tables += fmt.Sprintf(", %s %c", filter.TableName, entryIndex)
+			orExpr := GetOrExpr(entryIndex, filter.FieldName, filter.Conditions)
+			conditions += fmt.Sprintf(" AND a.caseId=%c.caseId AND (%s)", entryIndex, orExpr)
+			entryIndex ++
+		}
 	}
 
 	// Search
 	query := fmt.Sprintf(`
-		select a.caseId as caseId, sum(a.weight * b.weight) as weight
-		from WordIndex a, WordWeight%d b
-		where a.word = b.word
-		group by caseId order by weight desc limit %d`, tableId, limit)
+		SELECT a.caseId AS caseId, sum(a.weight * b.weight) AS weight
+		FROM WordIndex a, WordWeight%d b%s
+		WHERE a.word = b.word%s
+		GROUP BY caseId ORDER BY weight DESC LIMIT %d`, tableId, tables, conditions, limit)
+	println(query)
 	var rows *sql.Rows
 	rows, err = db.Query(query)
 	if err != nil {
-		return nil, err
+		return searchResultSet{}, err
 	}
 	result = searchResultSet{}
 	for rows.Next() {
@@ -220,26 +171,10 @@ func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32
 			weight float32
 		)
 		if err = rows.Scan(&caseId, &weight); err != nil {
-			return nil, err
+			return searchResultSet{}, err
 		}
 		result[caseId] = weight
 	}
 
 	return result, err
-}
-
-// todo: maybe we limit the tag/law/judge result count? like we do in words
-func (db database) searchCaseIdsByTag(tags []string) (searchResultSet, error) {
-	// language=MySQL
-	return db.searchBy("SELECT `caseId`, `weight` FROM TagIndex WHERE `tag` = ?", tags)
-}
-
-func (db database) searchCaseIdsByLaw(laws []string) (searchResultSet, error) {
-	// language=MySQL
-	return db.searchBy("SELECT `caseId`, `weight` FROM LawIndex WHERE `law` = ?", laws)
-}
-
-func (db database) searchCaseIdsByJudge(judges []string) (searchResultSet, error) {
-	// language=MySQL
-	return db.searchBy("SELECT `caseId`, `weight` FROM JudgeIndex WHERE `judge` = ?", judges)
 }

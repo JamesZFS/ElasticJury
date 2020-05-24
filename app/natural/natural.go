@@ -2,8 +2,6 @@ package natural
 
 import (
 	. "ElasticJury/app/common"
-	"errors"
-	"fmt"
 	"github.com/yanyiwu/gojieba"
 	"io/ioutil"
 	"strings"
@@ -70,62 +68,8 @@ func PreprocessWords(words []string) []string {
 	return res
 }
 
-const (
-	stateNormal = iota // scanning a normal character
-	stateLaw           // scanning between '《' and '》'
-)
-
 // Parse misc text and output it into the four fields
-// * Todo Need discussion
-func ParseFullText(text string) (words []string, tags []string, laws []string, judges []string) {
-	state := stateNormal
-	normalBuffer := make([]int32, 0, len(text))
-	lawBuffer := make([]int32, 0, 512)
-	laws = make([]string, 0)
-	// a simple state-machine parser
-	for i, char := range text {
-		switch state {
-		case stateNormal:
-			switch char {
-			case '《':
-				state = stateLaw
-			case '》':
-				fmt.Printf("Bad law '》' at %d\n", i)
-				// ignore
-			default:
-				normalBuffer = append(normalBuffer, char)
-			}
-		case stateLaw:
-			switch char {
-			case '《':
-				fmt.Printf("Bad law '《' at %d\n", i)
-				lawBuffer = lawBuffer[:0] // clear with capacity kept, https://yourbasic.org/golang/clear-slice/
-				// ignore
-			case '》':
-				// finishes a law
-				if len(lawBuffer) > 0 {
-					laws = append(laws, "《"+string(lawBuffer)+"》")
-				}
-				lawBuffer = lawBuffer[:0] // clear with capacity kept
-				state = stateNormal
-				normalBuffer = append(normalBuffer, ' ')
-			default:
-				lawBuffer = append(lawBuffer, char)
-			}
-		default:
-			panic(errors.New(fmt.Sprintf("unknown state %v", state)))
-		}
-	}
-	normalText := string(normalBuffer)
-	wordsDone := make(chan Void)
-	go func() {
-		words = PreprocessWords(jieba.CutForSearch(normalText, useHmm))
-		wordsDone <- Voidance
-	}()
-	tags = make([]string, 0)
-	judges = make([]string, 0)
-	<-wordsDone
-	fmt.Println("laws: ", laws)
-	fmt.Println("words: ", words)
-	return words, tags, laws, judges
+// * TODO: Need discussion
+func ParseFullText(text string) (words []string) {
+	return PreprocessWords(jieba.CutForSearch(text, useHmm))
 }
