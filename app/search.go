@@ -36,21 +36,21 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			_ = context.AbortWithError(http.StatusBadRequest, err)
 			return
 		}
-		words := strings.Split(context.Query("word"), ",")
+
+		var words Conditions
+		if NotWhiteSpace(json.Misc) {
+			words = natural.ParseFullText(json.Misc)
+		}
 		tags := strings.Split(context.Query("tag"), ",")
 		laws := strings.Split(context.Query("law"), ",")
 		judges := strings.Split(context.Query("judge"), ",")
-		if NotWhiteSpace(json.Misc) {
-			// Parse misc text and output it into the four fields
-			words = append(words, natural.ParseFullText(json.Misc)...)
-		}
 
 		// Params
 		params := []Param{
 			BuildParam("WordIndex", "word", words),
-			BuildParam("TagIndex", "tag", tags),
-			BuildParam("LawIndex", "law", laws),
-			BuildParam("JudgeIndex", "judge", judges),
+			BuildParam("TagIndex", "tag", MakeDefaultConditions(tags)),
+			BuildParam("LawIndex", "law", MakeDefaultConditions(laws)),
+			BuildParam("JudgeIndex", "judge", MakeDefaultConditions(judges)),
 		}
 
 		// Perform searching
@@ -130,7 +130,7 @@ func (db database) searchCaseIds(params []Param, limit int) (result searchResult
 	defer func() {
 		drop := fmt.Sprintf(`DROP TABLE Weights%d`, tableId)
 		if _, errDrop := db.Exec(drop); err == nil && errDrop != nil {
-			err = errDrop
+			result, err = searchResultSet{}, errDrop
 		}
 	}()
 
@@ -145,8 +145,8 @@ func (db database) searchCaseIds(params []Param, limit int) (result searchResult
 
 				// Insert items
 				var items []string
-				for i := range param.Conditions {
-					items = append(items, fmt.Sprintf("('%s',%f)", param.Conditions[i], param.Weights[i]))
+				for _, condition := range param.Conditions {
+					items = append(items, fmt.Sprintf("('%s',%f)", condition.Item, condition.Weight))
 				}
 				insert := fmt.Sprintf(`INSERT INTO Weights%d (item, weight) VALUES %s`, tableId, strings.Join(items, ","))
 				if _, err = db.Exec(insert); err != nil {
@@ -156,7 +156,7 @@ func (db database) searchCaseIds(params []Param, limit int) (result searchResult
 				orExpr := GetOrExpr(entryIndex, param.FieldName, param.Conditions)
 				conditions += fmt.Sprintf(" AND b.caseId=%c.caseId AND (%s)", entryIndex, orExpr)
 			}
-			entryIndex++
+			entryIndex ++
 		}
 	}
 	if first {

@@ -6,24 +6,45 @@ import (
 	"strings"
 )
 
+type Condition struct {
+	Item   string
+	Weight float32
+}
+
+type Conditions []Condition
+
 type Param struct {
 	TableName  string
 	FieldName  string
-	Conditions []string
-	Weights    []float32
+	Conditions Conditions
 }
 
-func BuildParam(tableName, fieldName string, querySegments []string) Param {
-	conditions := FilterStrs(querySegments, NotWhiteSpace)
-	weights := make([]float32, len(conditions))
-	for i := range weights {
-		weights[i] = 1.0
+func (c Conditions) Len() int {
+	return len(c)
+}
+
+func (c Conditions) Less(i, j int) bool {
+	return c[i].Weight > c[j].Weight
+}
+
+func (c Conditions) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
+}
+
+func MakeDefaultConditions(items []string) Conditions {
+	items = FilterStrs(items, NotWhiteSpace)
+	conditions := make(Conditions, len(items))
+	for i, item := range items {
+		conditions[i] = Condition{item, 1.0}
 	}
+	return conditions
+}
+
+func BuildParam(tableName, fieldName string, conditions Conditions) Param {
 	return Param{
 		tableName,
 		fieldName,
 		conditions,
-		weights,
 	}
 }
 
@@ -45,6 +66,13 @@ func FilterStrs(strs []string, predicate func(str string) bool) []string {
 	return res
 }
 
+func Min(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
+}
+
 func NotWhiteSpace(str string) bool {
 	if strings.TrimSpace(str) == "" {
 		return false
@@ -53,10 +81,10 @@ func NotWhiteSpace(str string) bool {
 	}
 }
 
-func GetOrExpr(entry int32, field string, conditions []string) string {
+func GetOrExpr(entry int32, field string, conditions Conditions) string {
 	var array []string
 	for _, condition := range conditions {
-		array = append(array, fmt.Sprintf("%c.%s = '%s'", entry, field, condition))
+		array = append(array, fmt.Sprintf("%c.%s = '%s'", entry, field, condition.Item))
 	}
 	return strings.Join(array, " OR ")
 }

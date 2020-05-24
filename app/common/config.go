@@ -9,6 +9,8 @@ const (
 	DBConnMaxLifeTime      = 10 * time.Minute // should be smaller than `select @@global.wait_timeout`
 	InitTableScriptPath    = "database/init-tables.sql"
 	InitTestDataScriptPath = "database/init-test-data.sql"
+	IdfDictPath			   = "preprocessor/idf_dict.json"
 	StopWordsPath          = "preprocessor/stopwords.txt"
 	SearchLimit            = 200
+	SearchWordLimit		   = 20
 )
