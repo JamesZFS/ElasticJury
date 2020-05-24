@@ -19,7 +19,7 @@
 
               <div class="my-2">
                 <span class="font-weight-bold">法官：</span>
-                <v-chip small v-for="(judge, index) in item.judges.slice(0, 10)" class="mx-1" :key="index"
+                <v-chip small v-for="(judge, index) in item.judges.slice(0, 10)" class="ma-1" :key="index"
                         @click="$emit('click-judge', judge)">
                   <v-avatar left>
                     <v-icon>mdi-account-circle</v-icon>
@@ -31,7 +31,7 @@
 
               <div class="my-2">
                 <span class="font-weight-bold">法条：</span>
-                <v-chip label small v-for="(law, index) in item.laws.slice(0, 3)" class="mx-1" :key="index"
+                <v-chip label small v-for="(law, index) in item.laws.slice(0, 3)" class="ma-1" :key="index"
                         @click="$emit('click-law', law)">
                   {{law}}
                 </v-chip>
@@ -40,7 +40,7 @@
 
               <div class="my-2">
                 <span class="font-weight-bold">标签：</span>
-                <v-chip label small v-for="(tag, index) in item.tags.slice(0, 8)" class="mx-1" :key="index"
+                <v-chip label small v-for="(tag, index) in item.tags.slice(0, 8)" class="ma-1" :key="index"
                         @click="$emit('click-tag', tag)">
                   {{tag}}
                 </v-chip>
@@ -49,7 +49,7 @@
 
               <div class="my-2">
                 <span class="font-weight-bold">细节：</span>
-                <span class="grey--text text--darken-2">
+                <span class="grey--text text--darken-2" style="line-height: normal">
                   {{item.detail.slice(0, 300)}}
                 </span>
                 <span v-if="item.detail.length > 300">...</span>

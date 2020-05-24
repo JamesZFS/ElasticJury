@@ -71,9 +71,20 @@
           <v-expansion-panel-content>
             <v-row>
               <v-col cols="8">
+                <!--       search box         -->
+                <v-text-field
+                        v-model="search"
+                        label="搜索..."
+                        flat
+                        clearable
+                        class="mt-n5"
+                />
                 <v-treeview
                         dense
+                        activatable
                         :items="tree"
+                        :search="search"
+                        :filter="filter"
                         class="scroll-view"
                 >
                   <template v-slot:prepend="{item, open}">
@@ -86,8 +97,8 @@
                     <!--    key-value pair      -->
                     <div v-if="item.attributes" style="cursor: pointer" @click="onClickAttribute(item.attributes)">
                       <span class="font-weight-bold">{{item.attributes.key}}</span>
-                      <span v-if="item.attributes.value.length > 0"> : {{item.attributes.value.slice(0, 20)}}</span>
-                      <span v-if="item.attributes.value.length > 20">...</span>
+                      <span v-if="item.attributes.value.length > 0"> : {{item.attributes.value.slice(0, 30)}}</span>
+                      <span v-if="item.attributes.value.length > 30">...</span>
                     </div>
                   </template>
                 </v-treeview>
@@ -102,14 +113,13 @@
         </v-expansion-panel>
 
       </v-expansion-panels>
-
     </v-card>
   </v-container>
 </template>
 
 <script>
     import {getCaseDetail} from "../api";
-    import convert from "xml-js";
+    import {xmlToTree} from "../utils";
 
     export default {
         name: "Detail",
@@ -125,24 +135,29 @@
                 header: '',
                 content: '',
             },
+            search: null,
         }),
         async created() {
             // get case id from route path
             this.id = parseInt(this.$route.params.id)
-            // load case detail & xml tree
-            Object.assign(this, await getCaseDetail(this.id))
+            let data = await getCaseDetail(this.id)
             // convert xml tree into js object for display
-            this.tree = convert.xml2js(this.tree, {
-                compact: false,
-                ignoreComment: true,
-                elementsKey: 'children',
-            }).children[0].children
+            data.tree = xmlToTree(data.tree)
+            // load case detail & xml tree
+            Object.assign(this, data)
         },
         methods: {
             onClickAttribute(attr) {
                 this.sideView.header = attr.key
                 this.sideView.content = attr.value
             },
+            filter(item, search) {
+                if (item.attributes) {
+                    return item.attributes.key.indexOf(search) >= 0 || item.attributes.value.indexOf(search) >= 0
+                } else {
+                    return false
+                }
+            }
         }
     }
 </script>
