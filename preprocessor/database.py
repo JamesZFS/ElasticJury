@@ -7,8 +7,10 @@ from utility import *
 
 
 class MySQLWrapper:
-    db_host = 'cdb-f0b6x25m.cd.tencentcdb.com'
-    db_port = 10104
+    db_host = 'localhost'
+    # db_host = 'cdb-f0b6x25m.cd.tencentcdb.com'
+    db_port = 3306
+    # db_port = 10104
     db_user = 'root'
     db_init_table_script = '../database/init-tables.sql'
     freq_commit = 50

@@ -181,6 +181,7 @@ def analyze(mapping, path):
 def reduce_count_weights(items):
     counter = {}
     for item in items:
+        item = item.lower()
         value = counter.get(item, 0)
         counter[item] = value + 1
     total = len(items)
@@ -191,6 +192,7 @@ def reduce_words(items, idf_dict):
     counter = {}
     total = 0
     for item in items:
+        item = item.lower()
         value = counter.get(item, 0)
         counter[item] = value + 1
         total += 1

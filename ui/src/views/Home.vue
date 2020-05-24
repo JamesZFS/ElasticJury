@@ -17,6 +17,15 @@
     </v-expand-transition>
 
     <div class="mx-auto my-5 search-box">
+      <v-textarea
+              filled
+              clearable
+              label="综合搜索..."
+              prepend-inner-icon="mdi-search-web"
+              row-height="0"
+              auto-grow
+              v-model="misc.inputs"
+      ></v-textarea>
       <ChipTextInput
               placeholder="全文检索词..."
               icon="mdi-feature-search-outline"
@@ -41,15 +50,6 @@
               v-model="tags.inputs"
               :candidates="tags.candidates"
       />
-      <v-textarea
-              filled
-              clearable
-              label="综合搜索..."
-              prepend-inner-icon="mdi-search-web"
-              row-height="0"
-              auto-grow
-              v-model="misc.inputs"
-      ></v-textarea>
     </div>
 
     <v-row justify="center" class="mb-2">
