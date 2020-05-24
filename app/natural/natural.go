@@ -3,6 +3,7 @@ package natural
 import (
 	. "ElasticJury/app/common"
 	"encoding/json"
+	"fmt"
 	"github.com/yanyiwu/gojieba"
 	"io/ioutil"
 	"sort"
@@ -20,7 +21,7 @@ const (
 
 var (
 	stopWords = make(stringSet)
-	idfDict	  = make(stringMap)
+	idfDict   = make(stringMap)
 	jieba     *gojieba.Jieba
 )
 
@@ -63,10 +64,10 @@ func PreprocessWord(word string) string {
 	escaped := make([]int32, 0, len(word))
 	for _, c := range word { // escape
 		switch c {
-			case '\'', '"', '`', '\\':
-				// ignore
-			default:
-				escaped = append(escaped, c)
+		case '\'', '"', '`', '\\':
+			// ignore
+		default:
+			escaped = append(escaped, c)
 		}
 	}
 	word = string(escaped)
@@ -108,7 +109,7 @@ func GetWordsWeights(words []string) []float32 {
 		v, in := idfDict[word]
 		if in {
 			mean += v
-			inDictCount ++
+			inDictCount++
 			weights[i] = v
 		}
 	}
@@ -128,6 +129,7 @@ func GetWordsWeights(words []string) []float32 {
 
 // Parse misc text into words
 func ParseFullText(text string) Conditions {
+	fmt.Println(text)
 	words := PreprocessWords(jieba.CutForSearch(text, useHmm))
 	weights := GetWordsWeights(words)
 	reduced := Reduce(words, weights)

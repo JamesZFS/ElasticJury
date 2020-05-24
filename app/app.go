@@ -54,7 +54,9 @@ func NewApp(databaseName, password string) *App {
 		// Retrieve case id by word, tag, law, judge
 		router.POST("/search", db.makeSearchHandler())
 		// Retrieve case info by case id
-		router.GET("/case", db.makeCaseInfoHandler())
+		router.GET("/info", db.makeCaseInfoHandler())
+		// Retrieve case detail by one case id
+		router.GET("/detail/:id", db.makeCaseDetailHandler())
 	}
 
 	return &App{

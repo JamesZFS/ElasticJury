@@ -1,4 +1,5 @@
 <template>
+  <!-- 主页/搜索/结果页 -->
   <v-container>
     <v-expand-transition>
       <div v-if="displayWelcome">
@@ -46,7 +47,7 @@
       />
       <ChipTextInput
               placeholder="标签..."
-              icon="mdi-bookmark-multiple-outline"
+              icon="mdi-tag-multiple-outline"
               v-model="tags.inputs"
               :candidates="tags.candidates"
       />
@@ -61,7 +62,10 @@
     <CaseList
             v-else
             :items="result.infos"
-            @click="onClickCase"
+            @click-case="onClickCase"
+            @click-judge="judge => judges.inputs.push(judge)"
+            @click-law="law => laws.inputs.push(law)"
+            @click-tag="tag => tags.inputs.push(tag)"
     />
     <v-pagination
             v-if="resultLength > 0"
@@ -174,8 +178,7 @@
                 this.curPage = page
                 // load results when page changes
                 let idsToLoad = this.result.ids.slice((this.curPage - 1) * this.casesPerPage, this.curPage * this.casesPerPage)
-                let resp = await getCaseInfo(idsToLoad)
-                this.result.infos = Object.values(resp)
+                this.result.infos = await getCaseInfo(idsToLoad)
                 this.loading = false
             },
             parseParams(query) {
@@ -223,8 +226,9 @@
                 let resp = await ping()
                 alert(resp)
             },
-            onClickCase(index) {
-                alert(`Clicked ${index}`);
+            onClickCase(id) {
+                let routeData = this.$router.resolve(`detail/${id}`);
+                window.open(routeData.href, '_blank');
             },
         }
     }

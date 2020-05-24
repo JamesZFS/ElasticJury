@@ -38,8 +38,9 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		}
 
 		var words Conditions
-		if NotWhiteSpace(json.Misc) {
-			words = natural.ParseFullText(json.Misc)
+		qWord := context.Query("word")
+		if NotWhiteSpace(qWord) || NotWhiteSpace(json.Misc) {
+			words = natural.ParseFullText(qWord + "," + json.Misc)
 		}
 		tags := strings.Split(context.Query("tag"), ",")
 		laws := strings.Split(context.Query("law"), ",")
@@ -112,6 +113,31 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 	}
 }
 
+func (db database) makeCaseDetailHandler() gin.HandlerFunc {
+	return func(context *gin.Context) {
+		id, err := strconv.Atoi(context.Param("id"))
+		if id <= 0 || err != nil {
+			_ = context.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+		var (
+			judges, laws, tags, detail, tree string
+		)
+		if err := db.QueryRow("SELECT judges, laws, tags, detail, tree FROM Cases WHERE id = ?", id).
+			Scan(&judges, &laws, &tags, &detail, &tree); err != nil {
+			panic(err)
+		}
+		context.JSON(http.StatusOK, gin.H{
+			"id":     id,
+			"judges": judges,
+			"laws":   laws,
+			"tags":   tags,
+			"detail": detail,
+			"tree":   tree,
+		})
+	}
+}
+
 func (db database) searchCaseIds(params []Param, limit int) (result searchResultSet, err error) {
 	// Create table
 	tableId := time.Now().UnixNano()
@@ -156,7 +182,7 @@ func (db database) searchCaseIds(params []Param, limit int) (result searchResult
 				orExpr := GetOrExpr(entryIndex, param.FieldName, param.Conditions)
 				conditions += fmt.Sprintf(" AND b.caseId=%c.caseId AND (%s)", entryIndex, orExpr)
 			}
-			entryIndex ++
+			entryIndex++
 		}
 	}
 	if first {
