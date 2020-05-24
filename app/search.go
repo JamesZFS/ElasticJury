@@ -29,7 +29,6 @@ import (
 func (db database) makeSearchHandler() gin.HandlerFunc {
 	return func(context *gin.Context) {
 		// Parse content
-		words := natural.PreprocessWords(strings.Split(context.Query("word"), ","))
 		var json struct {
 			Misc string `json:"misc" form:"misc"`
 		}
@@ -37,6 +36,7 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			_ = context.AbortWithError(http.StatusBadRequest, err)
 			return
 		}
+		var words []string
 		if NotWhiteSpace(json.Misc) {
 			// Parse misc text and output it into the four fields
 			words = append(words, natural.ParseFullText(json.Misc)...)
@@ -105,12 +105,11 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 	}
 }
 
-// Input: word(user input) -> weight(input word count or idf)
 func (db database) searchCaseIds(params []Param, limit int) (result searchResultSet, err error) {
 	// Create table
 	tableId := time.Now().UnixNano()
 	createTable := fmt.Sprintf(`
-		CREATE TABLE Weight%d
+		CREATE TABLE Weights%d
 		(
 			item   VARCHAR(512) NOT NULL,  # 首要的检索条件 
 			weight FLOAT        NOT NULL,  # 用户输入的词的权重（idf或者输入词的次数）
@@ -122,7 +121,7 @@ func (db database) searchCaseIds(params []Param, limit int) (result searchResult
 
 	// Drop after finish
 	defer func() {
-		drop := fmt.Sprintf(`DROP TABLE Weight%d`, tableId)
+		drop := fmt.Sprintf(`DROP TABLE Weights%d`, tableId)
 		if _, err = db.Exec(drop); err != nil { // Overwrite return value
 			result = searchResultSet{}
 		}
@@ -140,9 +139,9 @@ func (db database) searchCaseIds(params []Param, limit int) (result searchResult
 				// Insert items
 				var items []string
 				for i := range param.Conditions {
-					items = append(items, fmt.Sprintf("('%s',%f)", param.Conditions[i], param.Weight[i]))
+					items = append(items, fmt.Sprintf("('%s',%f)", param.Conditions[i], param.Weights[i]))
 				}
-				insert := fmt.Sprintf(`INSERT INTO Weight%d (item, weight) VALUES %s`, tableId, strings.Join(items, ","))
+				insert := fmt.Sprintf(`INSERT INTO Weights%d (item, weight) VALUES %s`, tableId, strings.Join(items, ","))
 				if _, err = db.Exec(insert); err != nil {
 					return searchResultSet{}, err
 				}
@@ -160,7 +159,7 @@ func (db database) searchCaseIds(params []Param, limit int) (result searchResult
 	// Search
 	query := fmt.Sprintf(`
 		SELECT b.caseId AS caseId, sum(b.weight * a.weight) AS weight
-		FROM Weight%d a%s
+		FROM Weights%d a%s
 		WHERE %s
 		GROUP BY caseId ORDER BY weight DESC LIMIT %d`, tableId, tables, conditions, limit)
 	var rows *sql.Rows

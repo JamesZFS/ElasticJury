@@ -8,18 +8,22 @@ import (
 
 type Param struct {
 	TableName  string
-	FieldName string
+	FieldName  string
 	Conditions []string
-	Weight []float32
+	Weights    []float32
 }
 
 func BuildParam(tableName, fieldName, query string) Param {
 	conditions := FilterStrs(strings.Split(query, ","), NotWhiteSpace)
+	weights := make([]float32, len(conditions))
+	for i := range weights {
+		weights[i] = 1.0
+	}
 	return Param {
 		tableName,
 		fieldName,
 		conditions,
-		make([]float32, len(conditions)),
+		weights,
 	}
 }
 
