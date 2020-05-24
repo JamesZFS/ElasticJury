@@ -1,6 +1,7 @@
 package app
 
 import (
+	. "ElasticJury/app/common"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -122,13 +123,13 @@ func TestApp(t *testing.T) {
 		},
 	}
 	t.Run("Ping test", func(t *testing.T) {
-		got := string(Get("/ping", app.Engine))
+		got := string(Request("GET", "/ping", app.Engine))
 		assert.Equal(t, "pong", strings.ToLower(got))
 	})
 
 	for _, tt := range searchTests {
 		t.Run(tt.name, func(t *testing.T) {
-			body := Get(tt.path, app.Engine)
+			body := Request("POST", tt.path, app.Engine)
 			var got gin.H
 			assert.Nilf(t, json.Unmarshal(body, &got), "Fail to parse response body %s", body)
 			assert.Equal(t, tt.want["count"], int(got["count"].(float64)))
@@ -138,10 +139,10 @@ func TestApp(t *testing.T) {
 	}
 }
 
-// Get 根据特定请求uri，发起get请求返回响应
-func Get(path string, router *gin.Engine) []byte {
+// Request 根据特定请求uri，发起get/post请求返回响应
+func Request(method string, path string, router *gin.Engine) []byte {
 	// 构造get请求
-	req := httptest.NewRequest("GET", path, nil)
+	req := httptest.NewRequest(method, path, nil)
 	// 初始化响应
 	w := httptest.NewRecorder()
 
@@ -165,9 +166,8 @@ func Get(path string, router *gin.Engine) []byte {
 
 func appPrologue() *App {
 	dbPrologue()
-	app := NewApp()
-	// language=MySQL
-	app.db.mustExec("USE ElasticJury_test")
+	password := GetEnvVar("PASSWORD", "")
+	app := NewApp(TestDatabaseName, password)
 	return app
 }
 

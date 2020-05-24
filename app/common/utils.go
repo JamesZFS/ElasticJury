@@ -1,4 +1,4 @@
-package app
+package common
 
 import (
 	"os"
@@ -29,4 +29,13 @@ func NotWhiteSpace(str string) bool {
 	} else {
 		return true
 	}
+}
+
+func IndexOfStr(strs []string, target string) int {
+	for i, str := range strs {
+		if str == target {
+			return i
+		}
+	}
+	return -1
 }

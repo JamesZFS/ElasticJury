@@ -19,7 +19,7 @@
     <div class="mx-auto my-5 search-box">
       <ChipTextInput
               placeholder="全文检索词..."
-              icon="mdi-magnify"
+              icon="mdi-feature-search-outline"
               v-model="words.inputs"
               :candidates="words.candidates"
       />
@@ -41,13 +41,18 @@
               v-model="tags.inputs"
               :candidates="tags.candidates"
       />
+      <v-textarea
+              filled
+              clearable
+              label="综合搜索..."
+              prepend-inner-icon="mdi-search-web"
+              row-height="0"
+              auto-grow
+              v-model="misc.inputs"
+      ></v-textarea>
     </div>
 
     <v-row justify="center" class="mb-2">
-      <v-radio-group v-model="mode" row class="mt-1 mr-8">
-        <v-radio label="And" value="AND"/>
-        <v-radio label="Or" value="OR"/>
-      </v-radio-group>
       <v-btn @click="onSearch" color="primary" :disabled="!searchAble">Search</v-btn>
       <v-btn @click="onPing" class="ml-10" color="secondary">Ping</v-btn>
     </v-row>
@@ -56,7 +61,6 @@
     <CaseList
             v-else
             :items="result.infos"
-            :weights="result.weightsToDisplay"
             @click="onClickCase"
     />
     <v-pagination
@@ -117,7 +121,6 @@
             casesPerPage: 10,
             notFoundTip: false,
             foundTip: false,
-            mode: 'AND',
             words: {
                 inputs: [],
                 candidates: ['调解', '协议', '当事人'],
@@ -134,11 +137,12 @@
                 inputs: [],
                 candidates: ['民事案件', '一审案件'],
             },
+            misc: {
+                inputs: "",
+            },
             result: {
                 ids: [],
-                weights: [],
                 infos: [],
-                weightsToDisplay: [],
             }
         }),
         computed: {
@@ -147,7 +151,7 @@
             },
             searchAble() {
                 return this.words.inputs.length > 0 || this.judges.inputs.length > 0 ||
-                    this.laws.inputs.length > 0 || this.tags.inputs.length > 0
+                    this.laws.inputs.length > 0 || this.tags.inputs.length > 0 || this.misc.inputs.length > 0
             },
             resultLength() {
                 return this.result.ids.length
@@ -171,7 +175,6 @@
                 // load results when page changes
                 let idsToLoad = this.result.ids.slice((this.curPage - 1) * this.casesPerPage, this.curPage * this.casesPerPage)
                 let resp = await getCaseInfo(idsToLoad)
-                this.result.weightsToDisplay = this.result.weights.slice((this.curPage - 1) * this.casesPerPage, this.curPage * this.casesPerPage)
                 this.result.infos = Object.values(resp)
                 this.loading = false
             },
@@ -180,7 +183,6 @@
                 this.judges.inputs = query.judge ? query.judge.split(',') : []
                 this.laws.inputs = query.law ? query.law.split(',') : []
                 this.tags.inputs = query.tag ? query.tag.split(',') : []
-                this.mode = query.mode || 'AND'
             },
             dumpParams() {
                 let query = {};
@@ -188,17 +190,17 @@
                 if (this.judges.inputs.length > 0) query.judge = this.judges.inputs.join(',')
                 if (this.laws.inputs.length > 0) query.law = this.laws.inputs.join(',')
                 if (this.tags.inputs.length > 0) query.tag = this.tags.inputs.join(',')
-                query.mode = this.mode
                 return query
             },
             async doSearch() {
                 this.loading = true;
+                console.log(this.misc.inputs)
                 let resp = await searchCaseId(
                     this.words.inputs,
                     this.judges.inputs,
                     this.laws.inputs,
                     this.tags.inputs,
-                    this.mode
+                    this.misc.inputs,
                 )
                 if (resp.count === 0) {
                     // no result:
@@ -206,15 +208,7 @@
                     this.result.infos = []
                     this.notFoundTip = true
                 } else {
-                    let pairs = Object.entries(resp.result)
-                        // eslint-disable-next-line
-                        .sort(([_id1, weight1], [_id2, weight2]) => weight2 - weight1) // sort by weight desc
-                    this.result.ids = []
-                    this.result.weights = []
-                    pairs.forEach(([id, weight]) => {
-                        this.result.ids.push(parseInt(id))
-                        this.result.weights.push(weight)
-                    })
+                    this.result.ids = resp.result
                     await this.setPage(1)
                     this.foundTip = true
                 }

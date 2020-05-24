@@ -8,7 +8,7 @@
                 class="font-weight-bold"
                 @click="$emit('click', index)"
         >
-          {{`案例 ${item.id} : ${weights[index]}`}}
+          {{`案例 ${item.id}`}}
         </v-btn>
 
         <v-divider></v-divider>
@@ -50,7 +50,6 @@
         name: "CaseList",
         props: {
             items: Array,
-            weights: Array,
         },
         data: () => ({}),
         methods: {}

@@ -1,6 +1,8 @@
 package app
 
 import (
+	. "ElasticJury/app/common"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -280,24 +282,25 @@ func Test_mergeSearchResult(t *testing.T) {
 }
 
 func dbPrologue() database {
-	db, err := newDatabase()
+	password := GetEnvVar("PASSWORD", "")
+	dbRoot, err := newDatabase("", password)
 	if err != nil {
 		panic(err)
 	}
-	// new test database
-	// language=MySQL
-	{
-		db.mustExec("DROP DATABASE IF EXISTS ElasticJury_test")
-		db.mustExec("CREATE DATABASE ElasticJury_test DEFAULT CHARACTER SET utf8")
-		db.mustExec("USE ElasticJury_test")
+	// drop old test database
+	dbRoot.mustExec(fmt.Sprintf("DROP DATABASE IF EXISTS %s", TestDatabaseName))
+	dbRoot.mustExec(fmt.Sprintf("CREATE DATABASE %s DEFAULT CHARACTER SET utf8", TestDatabaseName))
+	db, err := newDatabase(TestDatabaseName, password)
+	if err != nil {
+		panic(err)
 	}
-	db.mustExecScriptFile(initTableScriptPath)
-	db.mustExecScriptFile(initTestDataScriptPath)
+	db.mustExecScriptFile(InitTableScriptPath)
+	db.mustExecScriptFile(InitTestDataScriptPath)
 	return db
 }
 
 func dbEpilogue(db database) {
-	db.mustExec("DROP DATABASE ElasticJury_test")
+	db.mustExec(fmt.Sprintf("DROP DATABASE %s", TestDatabaseName))
 	if err := db.Close(); err != nil {
 		panic(err)
 	}
