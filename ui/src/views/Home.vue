@@ -97,7 +97,7 @@
             color="success"
             :timeout="3000"
     >
-      共找到{{resultLength}}条相关结果
+      共找到 {{resultLength}} 条相关结果
       <v-btn
               dark
               text

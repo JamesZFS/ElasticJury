@@ -10,12 +10,11 @@
         案件 {{id}}
       </v-card-title>
 
-      <v-divider/>
-
       <v-expansion-panels
               v-model="openedPanels"
               hover
               multiple
+              flat
               accordion
               class="mb-10"
       >
