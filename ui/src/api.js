@@ -3,7 +3,8 @@ import Axios from "axios";
 export const APIS = {
     PING: '/api/ping',
     SEARCH_CASE_ID: '/api/search',
-    GET_CASE_INFO: '/api/case',
+    GET_CASE_INFO: '/api/info',
+    GET_CASE_DETAIL: '/api/detail/:id',
 }
 
 export async function ping() {
@@ -32,7 +33,7 @@ export async function searchCaseId(words, judges, laws, tags, misc) {
 
 /**
  * @param ids{[int]}
- * @returns {Promise<[{judges: [string], laws: [strings], tags: [strings]}]>}
+ * @returns {Promise<[{id: int, judges: [string], laws: [strings], tags: [strings], detail: string}]>}
  */
 export async function getCaseInfo(ids) {
     let res = await Axios.get(APIS.GET_CASE_INFO, {
@@ -44,4 +45,17 @@ export async function getCaseInfo(ids) {
         }
     })
     return res.data
+}
+
+/**
+ * @param id{int}
+ * @returns {Promise<{id: int, judges: [string], laws: [strings], tags: [strings], detail: string, tree: string}>}
+ */
+export async function getCaseDetail(id) {
+    let res = await Axios.get(APIS.GET_CASE_DETAIL.replace(':id', String(id)));
+    let data = res.data
+    for (let field of ['judges', 'laws', 'tags']) {
+        data[field] = data[field].split('#').map(s => s.trim()).filter(s => s.length > 0)
+    }
+    return data
 }

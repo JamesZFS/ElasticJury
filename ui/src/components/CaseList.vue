@@ -6,9 +6,9 @@
                 text
                 x-large
                 class="font-weight-bold"
-                @click="$emit('click-case', index)"
+                @click="$emit('click-case', item.id)"
         >
-          {{`案例 ${item.id}`}}
+          案件 {{item.id}}
         </v-btn>
 
         <v-divider></v-divider>
@@ -50,7 +50,7 @@
               <div class="my-2">
                 <span class="font-weight-bold">细节：</span>
                 <span class="grey--text text--darken-2"
-                      @click="$emit('click-case', index)">
+                      @click="$emit('click-case', item.id)">
                   {{item.detail.slice(0, 300)}}
                 </span>
                 <span v-if="item.detail.length > 300">...</span>

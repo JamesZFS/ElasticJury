@@ -1,4 +1,5 @@
 <template>
+  <!-- 主页/搜索/结果页 -->
   <v-container>
     <v-expand-transition>
       <div v-if="displayWelcome">
@@ -225,8 +226,8 @@
                 let resp = await ping()
                 alert(resp)
             },
-            onClickCase(index) {
-                alert(`Clicked ${index}`);
+            onClickCase(id) {
+                window.open(`detail/${id}`, '_blank');
             },
         }
     }
