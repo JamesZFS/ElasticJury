@@ -3,13 +3,14 @@ package app
 import (
 	. "ElasticJury/app/common"
 	"ElasticJury/app/natural"
+	"database/sql"
 	"fmt"
-	"math/rand"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Handle search case id by words/tags/laws/judges
@@ -169,9 +170,9 @@ func (db database) searchCaseIdsByWord(words []string) (searchResultSet, error) 
 }
 
 // Input: word(user input) -> weight(input word count or idf)
-func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32, limit int) (searchResultSet, error) {
+func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32, limit int) (result searchResultSet, err error) {
 	// Create table
-	tableId := rand.Uint32()
+	tableId := time.Now().UnixNano()
 	createTable := fmt.Sprintf(`
 		CREATE TABLE WordWeight%d
 		(
@@ -179,10 +180,17 @@ func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32
 			weight FLOAT       NOT NULL, # 用户输入的词的权重（idf或者输入词的次数）
 			PRIMARY KEY (word)           # 一对一映射
 		) CHAR SET utf8;`, tableId)
-	println(createTable)
-	if _, err := db.Exec(createTable); err != nil {
+	if _, err = db.Exec(createTable); err != nil {
 		return nil, err
 	}
+
+	// Drop after finish
+	defer func() {
+		drop := fmt.Sprintf(`DROP TABLE WordWeight%d`, tableId)
+		if _, err = db.Exec(drop); err != nil { // Overwrite return value
+			result = nil
+		}
+	}()
 
 	// Insert items
 	items := make([]string, 0, len(wordWeightMap))
@@ -190,8 +198,7 @@ func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32
 		items = append(items, fmt.Sprintf("('%s',%f)", word, weight))
 	}
 	insert := fmt.Sprintf(`INSERT INTO WordWeight%d (word, weight) VALUES %s`, tableId, strings.Join(items, ","))
-	println(insert)
-	if _, err := db.Exec(insert); err != nil {
+	if _, err = db.Exec(insert); err != nil {
 		return nil, err
 	}
 
@@ -201,27 +208,23 @@ func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32
 		from WordIndex a, WordWeight%d b
 		where a.word = b.word
 		group by caseId order by weight desc limit %d`, tableId, limit)
-	println(query)
-	rows, err := db.Query(query)
+	var rows *sql.Rows
+	rows, err = db.Query(query)
 	if err != nil {
 		return nil, err
 	}
-	result := searchResultSet{}
+	result = searchResultSet{}
 	for rows.Next() {
 		var (
 			caseId int
 			weight float32
 		)
-		if err := rows.Scan(&caseId, &weight); err != nil {
+		if err = rows.Scan(&caseId, &weight); err != nil {
 			return nil, err
 		}
 		result[caseId] = weight
 	}
 
-	// Drop table and return
-	drop := fmt.Sprintf(`DROP TABLE WordWeight%d`, tableId)
-	println(drop)
-	_, err = db.Exec(drop)
 	return result, err
 }
 
