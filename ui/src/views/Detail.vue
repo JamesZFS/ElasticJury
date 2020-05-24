@@ -24,7 +24,7 @@
             法官
           </v-expansion-panel-header>
           <v-expansion-panel-content>
-            <v-chip v-for="judge in judges" class="ma-1">
+            <v-chip v-for="(judge, index) in judges" class="ma-1" :key="index">
               <v-avatar left>
                 <v-icon>mdi-account-circle</v-icon>
               </v-avatar>
@@ -38,7 +38,7 @@
             法条
           </v-expansion-panel-header>
           <v-expansion-panel-content>
-            <v-chip label v-for="law in laws" class="ma-1">
+            <v-chip label v-for="(law, index) in laws" class="ma-1" :key="index">
               {{law}}
             </v-chip>
           </v-expansion-panel-content>
@@ -49,7 +49,7 @@
             标签
           </v-expansion-panel-header>
           <v-expansion-panel-content>
-            <v-chip label v-for="tag in tags" class="ma-1">
+            <v-chip label v-for="(tag, index) in tags" class="ma-1" :key="index">
               {{tag}}
             </v-chip>
           </v-expansion-panel-content>
@@ -72,9 +72,9 @@
             <v-row>
               <v-col cols="8">
                 <v-treeview
-                        open-on-click
                         dense
                         :items="tree"
+                        class="scroll-view"
                 >
                   <template v-slot:prepend="{item, open}">
                     <v-icon v-if="item.children">
@@ -84,7 +84,7 @@
                   </template>
                   <template v-slot:label="{item}">
                     <!--    key-value pair      -->
-                    <div v-if="item.attributes" @click="onClickAttribute(item.attributes)">
+                    <div v-if="item.attributes" style="cursor: pointer" @click="onClickAttribute(item.attributes)">
                       <span class="font-weight-bold">{{item.attributes.key}}</span>
                       <span v-if="item.attributes.value.length > 0"> : {{item.attributes.value.slice(0, 20)}}</span>
                       <span v-if="item.attributes.value.length > 20">...</span>
@@ -94,8 +94,8 @@
               </v-col>
               <v-divider vertical/>
               <v-col>
-                <h3 class="font-weight-bold">{{sideView.header}}</h3>
-                <p>{{sideView.content}}</p>
+                <h3 class="font-weight-bold mb-2">{{sideView.header}}</h3>
+                <p class="scroll-view">{{sideView.content}}</p>
               </v-col>
             </v-row>
           </v-expansion-panel-content>
@@ -142,10 +142,14 @@
             onClickAttribute(attr) {
                 this.sideView.header = attr.key
                 this.sideView.content = attr.value
-            }
+            },
         }
     }
 </script>
 
 <style scoped>
+  .scroll-view {
+    height: 90vh;
+    overflow-y: scroll;
+  }
 </style>
