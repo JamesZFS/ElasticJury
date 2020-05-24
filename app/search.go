@@ -28,15 +28,8 @@ import (
 //
 func (db database) makeSearchHandler() gin.HandlerFunc {
 	return func(context *gin.Context) {
-		// Parse params:
-		words := natural.PreprocessWords(strings.Split(context.Query("word"), ","))
-		filters := []Filter {
-			BuildFilter("TagIndex", "tag", context.Query("tag")),
-			BuildFilter("LawIndex", "law", context.Query("law")),
-			BuildFilter("JudgeIndex", "judge", context.Query("judge")),
-		}
-
 		// Parse content
+		words := natural.PreprocessWords(strings.Split(context.Query("word"), ","))
 		var json struct {
 			Misc string `json:"misc" form:"misc"`
 		}
@@ -49,12 +42,16 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			words = append(words, natural.ParseFullText(json.Misc)...)
 		}
 
-		// Perform searching
-		wordWeightMap := map[string]float32{}
-		for _, word := range words {
-			wordWeightMap[word] = 1.0 // TODO: maybe use
+		// Params
+		params := []Param{
+			BuildParam("WordIndex", "word", strings.Join(words, ",")),
+			BuildParam("TagIndex", "tag", context.Query("tag")),
+			BuildParam("LawIndex", "law", context.Query("law")),
+			BuildParam("JudgeIndex", "judge", context.Query("judge")),
 		}
-		result, err := db.searchCaseIdsByWordWeightMap(wordWeightMap, filters, WordSearchLimit)
+
+		// Perform searching
+		result, err := db.searchCaseIds(params, SearchLimit)
 		if err != nil {
 			panic(err)
 		}
@@ -109,15 +106,15 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 }
 
 // Input: word(user input) -> weight(input word count or idf)
-func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32, filters []Filter, limit int) (result searchResultSet, err error) {
+func (db database) searchCaseIds(params []Param, limit int) (result searchResultSet, err error) {
 	// Create table
 	tableId := time.Now().UnixNano()
 	createTable := fmt.Sprintf(`
-		CREATE TABLE WordWeight%d
+		CREATE TABLE Weight%d
 		(
-			word   VARCHAR(64) NOT NULL, # 用户输入的查询词
-			weight FLOAT       NOT NULL, # 用户输入的词的权重（idf或者输入词的次数）
-			PRIMARY KEY (word)           # 一对一映射
+			item   VARCHAR(512) NOT NULL,  # 首要的检索条件 
+			weight FLOAT        NOT NULL,  # 用户输入的词的权重（idf或者输入词的次数）
+			PRIMARY KEY (item)             # 一对一映射
 		) CHAR SET utf8;`, tableId)
 	if _, err = db.Exec(createTable); err != nil {
 		return searchResultSet{}, err
@@ -125,40 +122,47 @@ func (db database) searchCaseIdsByWordWeightMap(wordWeightMap map[string]float32
 
 	// Drop after finish
 	defer func() {
-		drop := fmt.Sprintf(`DROP TABLE WordWeight%d`, tableId)
+		drop := fmt.Sprintf(`DROP TABLE Weight%d`, tableId)
 		if _, err = db.Exec(drop); err != nil { // Overwrite return value
 			result = searchResultSet{}
 		}
 	}()
 
-	// Insert items
-	items := make([]string, 0, len(wordWeightMap))
-	for word, weight := range wordWeightMap {
-		items = append(items, fmt.Sprintf("('%s',%f)", word, weight))
-	}
-	insert := fmt.Sprintf(`INSERT INTO WordWeight%d (word, weight) VALUES %s`, tableId, strings.Join(items, ","))
-	if _, err = db.Exec(insert); err != nil {
-		return searchResultSet{}, err
-	}
+	// Convert params into SQL conditions
+	tables, conditions, entryIndex, first := "", "", 'b', true
+	for _, param := range params {
+		if len(param.Conditions) > 0 {
+			tables += fmt.Sprintf(", %s %c", param.TableName, entryIndex)
+			if first {
+				first = false
+				conditions += fmt.Sprintf("a.item = %c.%s", entryIndex, param.FieldName)
 
-	// Convert filters into SQL conditions
-	tables, conditions, entryIndex := "", "", 'c'
-	for _, filter := range filters {
-		if len(filter.Conditions) > 0 {
-			tables += fmt.Sprintf(", %s %c", filter.TableName, entryIndex)
-			orExpr := GetOrExpr(entryIndex, filter.FieldName, filter.Conditions)
-			conditions += fmt.Sprintf(" AND a.caseId=%c.caseId AND (%s)", entryIndex, orExpr)
+				// Insert items
+				var items []string
+				for i := range param.Conditions {
+					items = append(items, fmt.Sprintf("('%s',%f)", param.Conditions[i], param.Weight[i]))
+				}
+				insert := fmt.Sprintf(`INSERT INTO Weight%d (item, weight) VALUES %s`, tableId, strings.Join(items, ","))
+				if _, err = db.Exec(insert); err != nil {
+					return searchResultSet{}, err
+				}
+			} else {
+				orExpr := GetOrExpr(entryIndex, param.FieldName, param.Conditions)
+				conditions += fmt.Sprintf(" AND b.caseId=%c.caseId AND (%s)", entryIndex, orExpr)
+			}
 			entryIndex ++
 		}
+	}
+	if first {
+		panic("Empty search request")
 	}
 
 	// Search
 	query := fmt.Sprintf(`
-		SELECT a.caseId AS caseId, sum(a.weight * b.weight) AS weight
-		FROM WordIndex a, WordWeight%d b%s
-		WHERE a.word = b.word%s
+		SELECT b.caseId AS caseId, sum(b.weight * a.weight) AS weight
+		FROM Weight%d a%s
+		WHERE %s
 		GROUP BY caseId ORDER BY weight DESC LIMIT %d`, tableId, tables, conditions, limit)
-	println(query)
 	var rows *sql.Rows
 	rows, err = db.Query(query)
 	if err != nil {

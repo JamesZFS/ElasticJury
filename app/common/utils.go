@@ -6,17 +6,20 @@ import (
 	"strings"
 )
 
-type Filter struct {
+type Param struct {
 	TableName  string
 	FieldName string
 	Conditions []string
+	Weight []float32
 }
 
-func BuildFilter(tableName, fieldName, query string) Filter {
-	return Filter{
+func BuildParam(tableName, fieldName, query string) Param {
+	conditions := FilterStrs(strings.Split(query, ","), NotWhiteSpace)
+	return Param {
 		tableName,
 		fieldName,
-		FilterStrs(strings.Split(query, ","), NotWhiteSpace),
+		conditions,
+		make([]float32, len(conditions)),
 	}
 }
 
