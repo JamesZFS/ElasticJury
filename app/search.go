@@ -38,13 +38,13 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		}
 
 		var words Conditions
-		qWord := context.Query("word")
-		if NotWhiteSpace(qWord) || NotWhiteSpace(json.Misc) {
-			words = natural.ParseFullText(qWord + "," + json.Misc)
+		misc := context.Query("word") + " " + json.Misc
+		if NotWhiteSpace(misc) {
+			words = natural.ParseFullText(misc)
 		}
-		tags := strings.Split(context.Query("tag"), ",")
-		laws := strings.Split(context.Query("law"), ",")
-		judges := strings.Split(context.Query("judge"), ",")
+		tags := natural.PreprocessWords(strings.Split(context.Query("tag"), ","))
+		laws := natural.PreprocessWords(strings.Split(context.Query("law"), ","))
+		judges := natural.PreprocessWords(strings.Split(context.Query("judge"), ","))
 
 		// Params
 		params := []Param{
@@ -58,10 +58,11 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		result, err := db.searchCaseIds(params, SearchLimit)
 		if err != nil {
 			if err, castSuccess := err.(EmptyParamErr); castSuccess {
-				_ = context.AbortWithError(http.StatusBadRequest, err)
+				context.JSON(http.StatusOK, emptyResponse)
+				fmt.Println(err)
 				return
 			}
-			panic(err)
+			panic(err) // unknown
 		}
 
 		// Return

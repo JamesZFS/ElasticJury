@@ -3,7 +3,6 @@ package natural
 import (
 	. "ElasticJury/app/common"
 	"encoding/json"
-	"fmt"
 	"github.com/yanyiwu/gojieba"
 	"io/ioutil"
 	"sort"
@@ -48,6 +47,7 @@ func Initialize() {
 	if err != nil {
 		goto ERROR
 	}
+	println("Natural initialized.")
 	return
 
 ERROR:
@@ -78,6 +78,7 @@ func PreprocessWord(word string) string {
 	}
 }
 
+// Trim white space, escape, and filter out empty words
 func PreprocessWords(words []string) []string {
 	var res []string
 	for _, word := range words {
@@ -129,7 +130,6 @@ func GetWordsWeights(words []string) []float32 {
 
 // Parse misc text into words
 func ParseFullText(text string) Conditions {
-	fmt.Println(text)
 	words := PreprocessWords(jieba.CutForSearch(text, useHmm))
 	weights := GetWordsWeights(words)
 	reduced := Reduce(words, weights)

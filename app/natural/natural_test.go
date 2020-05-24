@@ -2,106 +2,9 @@ package natural
 
 import (
 	. "ElasticJury/app/common"
+	"reflect"
 	"testing"
 )
-
-func TestParseFullText(t *testing.T) {
-	Initialize()
-	defer Finalize()
-	type args struct {
-		text string
-	}
-	tests := []struct {
-		name       string
-		args       args
-		wantWords  []string
-		wantTags   []string
-		wantLaws   []string
-		wantJudges []string
-	}{
-		{
-			name:       "nil",
-			args:       args{""},
-			wantWords:  nil,
-			wantTags:   nil,
-			wantLaws:   nil,
-			wantJudges: nil,
-		},
-		{
-			name:       "only words",
-			args:       args{"我到清华大学念书"},
-			wantWords:  []string{"清华大学", "念书"},
-			wantTags:   nil,
-			wantLaws:   nil,
-			wantJudges: nil,
-		},
-		{
-			name:       "only laws",
-			args:       args{"《自强不息》《厚德载物》"},
-			wantWords:  nil,
-			wantTags:   nil,
-			wantLaws:   []string{"《自强不息》", "《厚德载物》"},
-			wantJudges: nil,
-		},
-		{
-			name:       "bad laws 1",
-			args:       args{"《自强不息》》"},
-			wantWords:  nil,
-			wantTags:   nil,
-			wantLaws:   []string{"《自强不息》"},
-			wantJudges: nil,
-		},
-		{
-			name:       "bad laws 2",
-			args:       args{"《自《强不息》, 《厚德载物》"},
-			wantWords:  nil,
-			wantTags:   nil,
-			wantLaws:   []string{"《强不息》", "《厚德载物》"},
-			wantJudges: nil,
-		},
-		{
-			name:       "bad laws 3",
-			args:       args{"《》》《《》《x》"},
-			wantWords:  nil,
-			wantTags:   nil,
-			wantLaws:   []string{"《x》"},
-			wantJudges: nil,
-		},
-		{
-			name:       "misc 1",
-			args:       args{"我在清华大学学习《x《搜索引擎技术》》"},
-			wantWords:  []string{"清华大学", "学习"},
-			wantTags:   nil,
-			wantLaws:   []string{"《搜索引擎技术》"},
-			wantJudges: nil,
-		},
-		{
-			name:       "misc 2",
-			args:       args{"我在清华大学学习《x《搜索引擎技术》》这是一门非常重要的课《《法律》》完"},
-			wantWords:  []string{"清华大学", "学习", "这是", "一门", "课", "完"},
-			wantTags:   nil,
-			wantLaws:   []string{"《搜索引擎技术》", "《法律》"},
-			wantJudges: nil,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotWords, gotTags, gotLaws, gotJudges := ParseFullText(tt.args.text)
-			if !subSet(tt.wantWords, gotWords) {
-				t.Errorf("ParseFullText() gotWords = %v, want %v", gotWords, tt.wantWords)
-			}
-			if !Equal(gotTags, tt.wantTags) {
-				t.Errorf("ParseFullText() gotTags = %v, want %v", gotTags, tt.wantTags)
-			}
-			if !Equal(gotLaws, tt.wantLaws) {
-				t.Errorf("ParseFullText() gotLaws = %v, want %v", gotLaws, tt.wantLaws)
-			}
-			if !Equal(gotJudges, tt.wantJudges) {
-				t.Errorf("ParseFullText() gotJudges = %v, want %v", gotJudges, tt.wantJudges)
-			}
-		})
-	}
-}
 
 func subSet(words1 []string, words2 []string) bool {
 	for _, w := range words1 {
@@ -124,4 +27,87 @@ func Equal(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func TestPreprocessWord(t *testing.T) {
+	type args struct {
+		word string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "1",
+			args: args{"审判"},
+			want: "审判",
+		},
+		{
+			name: "2",
+			args: args{"  \t审判 "},
+			want: "审判",
+		},
+		{
+			name: "3",
+			args: args{"  \t审 判 "},
+			want: "审 判",
+		},
+		{
+			name: "escape",
+			args: args{"  \t'《\"审 `判\\》 "},
+			want: "《审 判》",
+		},
+		{
+			name: "nil",
+			args: args{"  \t'\\\" "},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := PreprocessWord(tt.args.word); got != tt.want {
+				t.Errorf("PreprocessWord() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPreprocessWords(t *testing.T) {
+	type args struct {
+		words []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			name: "nil",
+			args: args{nil},
+			want: nil,
+		},
+		{
+			name: "1",
+			args: args{[]string{"123", "321"}},
+			want: []string{"123", "321"},
+		},
+		{
+			name: "2",
+			args: args{[]string{"1`2\\3", "3\"2'1"}},
+			want: []string{"123", "321"},
+		},
+		{
+			name: "3",
+			args: args{[]string{"", "\ttag", "\t'`", "《案件》 "}},
+			want: []string{"tag", "《案件》"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := PreprocessWords(tt.args.words); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("PreprocessWords() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

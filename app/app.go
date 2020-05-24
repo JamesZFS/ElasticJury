@@ -37,7 +37,6 @@ func NewApp(databaseName, password string) *App {
 			panic(err) // unknown err
 		}
 	}
-
 	println("Database initialized.")
 
 	// Setup router:
@@ -58,6 +57,7 @@ func NewApp(databaseName, password string) *App {
 		// Retrieve case detail by one case id
 		router.GET("/detail/:id", db.makeCaseDetailHandler())
 	}
+	println("Search engine initialized.")
 
 	return &App{
 		Engine: router,
