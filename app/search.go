@@ -36,7 +36,10 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			_ = context.AbortWithError(http.StatusBadRequest, err)
 			return
 		}
-		var words []string
+		words := strings.Split(context.Query("word"), ",")
+		tags := strings.Split(context.Query("tag"), ",")
+		laws := strings.Split(context.Query("law"), ",")
+		judges := strings.Split(context.Query("judge"), ",")
 		if NotWhiteSpace(json.Misc) {
 			// Parse misc text and output it into the four fields
 			words = append(words, natural.ParseFullText(json.Misc)...)
@@ -44,15 +47,19 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 
 		// Params
 		params := []Param{
-			BuildParam("WordIndex", "word", strings.Join(words, ",")),
-			BuildParam("TagIndex", "tag", context.Query("tag")),
-			BuildParam("LawIndex", "law", context.Query("law")),
-			BuildParam("JudgeIndex", "judge", context.Query("judge")),
+			BuildParam("WordIndex", "word", words),
+			BuildParam("TagIndex", "tag", tags),
+			BuildParam("LawIndex", "law", laws),
+			BuildParam("JudgeIndex", "judge", judges),
 		}
 
 		// Perform searching
 		result, err := db.searchCaseIds(params, SearchLimit)
 		if err != nil {
+			if err, castSuccess := err.(EmptyParamErr); castSuccess {
+				_ = context.AbortWithError(http.StatusBadRequest, err)
+				return
+			}
 			panic(err)
 		}
 
@@ -122,8 +129,8 @@ func (db database) searchCaseIds(params []Param, limit int) (result searchResult
 	// Drop after finish
 	defer func() {
 		drop := fmt.Sprintf(`DROP TABLE Weights%d`, tableId)
-		if _, err = db.Exec(drop); err != nil { // Overwrite return value
-			result = searchResultSet{}
+		if _, errDrop := db.Exec(drop); err == nil && errDrop != nil {
+			err = errDrop
 		}
 	}()
 
@@ -149,11 +156,11 @@ func (db database) searchCaseIds(params []Param, limit int) (result searchResult
 				orExpr := GetOrExpr(entryIndex, param.FieldName, param.Conditions)
 				conditions += fmt.Sprintf(" AND b.caseId=%c.caseId AND (%s)", entryIndex, orExpr)
 			}
-			entryIndex ++
+			entryIndex++
 		}
 	}
 	if first {
-		panic("Empty search request")
+		return nil, EmptyParamErr{}
 	}
 
 	// Search
