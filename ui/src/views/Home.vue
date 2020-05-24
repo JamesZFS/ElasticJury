@@ -61,7 +61,10 @@
     <CaseList
             v-else
             :items="result.infos"
-            @click="onClickCase"
+            @click-case="onClickCase"
+            @click-judge="judge => judges.inputs.push(judge)"
+            @click-law="law => laws.inputs.push(law)"
+            @click-tag="tag => tags.inputs.push(tag)"
     />
     <v-pagination
             v-if="resultLength > 0"
