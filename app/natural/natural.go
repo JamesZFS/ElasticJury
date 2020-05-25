@@ -132,13 +132,15 @@ func GetWordsWeights(words []string) []float32 {
 	} else {
 		mean /= float32(inDictCount)
 	}
-	for i, word := range words {
-		_, in := idfDict[word]
-		if !in {
-			weights[i] = mean
-		} else {
-			weights[i] += mean / 2
+	var max float32
+	for i := range words {
+		weights[i] = weights[i] + mean
+		if weights[i] > max {
+			max = weights[i]
 		}
+	}
+	for i := range weights {
+		weights[i] /= max
 	}
 	return weights
 }

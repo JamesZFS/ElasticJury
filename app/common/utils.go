@@ -101,6 +101,18 @@ func FilterStrs(strs []string, predicate func(str string) bool) []string {
 	return res
 }
 
+func Unique(items []Condition) []Condition {
+	set := make(map[string]bool)
+	var reduced []Condition
+	for _, item := range items {
+		if !set[item.Item] {
+			set[item.Item] = true
+			reduced = append(reduced, item)
+		}
+	}
+	return reduced
+}
+
 func UniqueShuffle(items []string) []string {
 	set := make(map[string]bool)
 	var shuffled []string

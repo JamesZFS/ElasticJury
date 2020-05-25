@@ -50,20 +50,29 @@ func BuildDict(path string) Dict {
 
 	for _, item := range strings.Split(string(bytes), "\n") {
 		kv := strings.Split(item, ",")
-		word := kv[0]
+		full := kv[0]
 		index := TitleMarkFilter(kv[0])
 		weight, _ := strconv.ParseFloat(kv[1], 32)
-		condition := Condition{Item: word, Weight: float32(weight)}
+		condition := Condition{Item: full, Weight: float32(weight)}
 		for i := range index {
 			key := index[:i]
 			conditionMap[key] = append(conditionMap[key], condition)
 		}
+
+		words := jieba.CutForSearch(index, true)
+		for _, word := range words {
+			for i := range word {
+				key := word[:i]
+				conditionMap[key] = append(conditionMap[key], condition)
+			}
+		}
 	}
 
-	for key, value := range conditionMap {
-		sort.Sort(value)
-		value = value[0:Min(len(value), TipsCount)]
-		dict[key] = value.ItemArray()
+	for key := range conditionMap {
+		conditionMap[key] = Unique(conditionMap[key])
+		sort.Sort(conditionMap[key])
+		conditionMap[key] = conditionMap[key][0:Min(len(conditionMap[key]), TipsCount)]
+		dict[key] = conditionMap[key].ItemArray()
 		sort.Sort(dict[key])
 	}
 	return dict
