@@ -24,7 +24,7 @@
               prepend-inner-icon="mdi-search-web"
               row-height="0"
               auto-grow
-              v-model="misc.inputs"
+              v-model="misc.input"
       />
       <ChipTextInput
               placeholder="法官名..."
@@ -119,7 +119,7 @@
             notFoundTip: false,
             foundTip: false,
             misc: {
-              inputs: "",
+                input: "",
             },
             judges: {
                 inputs: [],
@@ -144,16 +144,16 @@
             },
             searchAble() {
                 return this.judges.inputs.length > 0 || this.laws.inputs.length > 0 ||
-                        this.tags.inputs.length > 0 || this.misc.inputs.length > 0
+                    this.tags.inputs.length > 0 || this.misc.input.length > 0
             },
             resultLength() {
                 return this.result.ids.length
             }
         },
-        mounted() {
+        created() {
             // possibly parse url into search param
             let query = this.$route.query
-            if (query.hasOwnProperty('word') || query.hasOwnProperty('judge') ||
+            if (query.hasOwnProperty('misc') || query.hasOwnProperty('judge') ||
                 query.hasOwnProperty('law') || query.hasOwnProperty('tag')) {
                 this.displayWelcome = false;
                 // parse param from route and do search
@@ -171,37 +171,39 @@
                 this.loading = false
             },
             parseParams(query) {
+                this.misc.input = query.misc || ''
                 this.judges.inputs = query.judge ? query.judge.split(',') : []
                 this.laws.inputs = query.law ? query.law.split(',') : []
                 this.tags.inputs = query.tag ? query.tag.split(',') : []
             },
+            dumpParams() {
+                let query = {};
+                if (this.misc.input.length > 0) query.misc = this.misc.input
+                if (this.judges.inputs.length > 0) query.judge = this.judges.inputs.join(',')
+                if (this.laws.inputs.length > 0) query.law = this.laws.inputs.join(',')
+                if (this.tags.inputs.length > 0) query.tag = this.tags.inputs.join(',')
+                return query
+            },
             pushInput(inputs, item) {
                 if (!inputs.includes(item)) {
-                  inputs.push(item)
+                    inputs.push(item)
                 }
             },
             async doSearch() {
                 this.loading = true;
                 let resp = await searchCaseId(
+                    this.misc.input,
                     this.judges.inputs,
                     this.laws.inputs,
                     this.tags.inputs,
-                    this.misc.inputs,
                 )
-                if (resp.byteLength === 0) {
+                if (resp.length === 0) {
                     // no result:
                     this.result.ids = []
                     this.result.infos = []
                     this.notFoundTip = true
                 } else {
-                    this.result.ids = []
-                    let bytes = new Uint8Array(resp)
-                    for (let i = 0; i < bytes.length / 3; ++ i) {
-                        let id = bytes[i * 3]
-                        id += bytes[i * 3 + 1] << 8
-                        id += bytes[i * 3 + 2] << 16
-                        this.result.ids.push(id)
-                    }
+                    this.result.ids = resp
                     await this.setPage(1)
                     this.foundTip = true
                 }
@@ -209,6 +211,7 @@
             },
             onSearch() {
                 this.displayWelcome = false
+                this.$router.push({query: this.dumpParams()})
                 this.doSearch()
             },
             async onPing() {

@@ -2,7 +2,7 @@
 
 An archetypical search engine for judiciary cases.
 
-By James Zheng and Chenggang Zhao
+By Fengshi Zheng and Chenggang Zhao
 
 ## Build & Deploy
 

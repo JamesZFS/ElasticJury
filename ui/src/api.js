@@ -12,19 +12,28 @@ export async function ping() {
 }
 
 /**
+ * @param misc{string}
  * @param judges{[string]}
  * @param laws{[string]}
  * @param tags{[string]}
- * @param misc{string}
+ * @return {[int]}
  */
-export async function searchCaseId(judges, laws, tags, misc) {
+export async function searchCaseId(misc, judges, laws, tags) {
     let res = await Axios.post(APIS.SEARCH_CASE_ID, {
         misc: misc,
         law: laws.join(','),
         tag: tags.join(','),
         judge: judges.join(',')
-    }, {responseType: "arraybuffer"});
-    return res.data
+    }, {responseType: "arraybuffer"})
+    let bytes = new Uint8Array(res.data)
+    let ids = []
+    for (let i = 0; i < bytes.length / 3; ++ i) {
+        let id = bytes[i * 3]
+        id += bytes[i * 3 + 1] << 8
+        id += bytes[i * 3 + 2] << 16
+        ids.push(id)
+    }
+    return ids
 }
 
 /**
