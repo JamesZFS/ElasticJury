@@ -14,6 +14,8 @@
               flat
               solo-inverted
               clearable
+              hide-details
+              class="mb-8"
       />
     </template>
     <v-list dense>
@@ -51,10 +53,7 @@
                 let turn = ++this.turn
                 await sleep(1000)
                 if (turn !== this.turn) return // only refresh when this is the most recent call
-                if (!val || val[val.length - 1] === ' ') { // ignore blank input or when typing ' '
-                    this.menu = false
-                    return
-                }
+                if (!val || val[val.length - 1] === ' ') return // ignore blank input or when typing ' '
                 let i = val.length - 1
                 while (i >= 0 && val[i] !== ' ') --i
                 this.lastWord = val.slice(++i)

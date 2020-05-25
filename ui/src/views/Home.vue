@@ -22,26 +22,28 @@
               placeholder="综合搜索..."
               icon="mdi-search-web"
               v-model="misc.input"
-              :candidates="misc.candidates"
-              :on-associate="onAssociateMisc"
+              :on-associate="word => onAssociate('word', word)"
       />
       <ChipTextInput
               placeholder="法官名..."
               icon="mdi-account-multiple"
               v-model="judges.inputs"
-              :candidates="judges.candidates"
+              :history="judges.history"
+              :on-associate="judge => onAssociate('judge', judge)"
       />
       <ChipTextInput
               placeholder="法条..."
               icon="mdi-book-open-page-variant"
               v-model="laws.inputs"
-              :candidates="laws.candidates"
+              :history="laws.history"
+              :on-associate="law => onAssociate('law', law)"
       />
       <ChipTextInput
               placeholder="标签..."
               icon="mdi-tag-multiple-outline"
               v-model="tags.inputs"
-              :candidates="tags.candidates"
+              :history="tags.history"
+              :on-associate="tag => onAssociate('tag', tag)"
       />
     </div>
 
@@ -121,19 +123,18 @@
             foundTip: false,
             misc: {
                 input: '',
-                candidates: ['调解', '公司', '当事人'],
             },
             judges: {
                 inputs: [],
-                candidates: ['黄琴英', '高原', '张成镇'],
+                history: ['黄琴英', '高原', '张成镇'],
             },
             laws: {
                 inputs: [],
-                candidates: ['《中华人民共和国民法通则》', '《中华人民共和国民事诉讼法》', '《中华人民共和国担保法》'],
+                history: ['《中华人民共和国民法通则》', '《中华人民共和国民事诉讼法》', '《中华人民共和国担保法》'],
             },
             tags: {
                 inputs: [],
-                candidates: ['民事案件', '一审案件'],
+                history: ['民事案件', '一审案件'],
             },
             result: {
                 ids: [],
@@ -224,11 +225,11 @@
                 let routeData = this.$router.resolve(`detail/${id}`);
                 window.open(routeData.href, '_blank');
             },
-            async onAssociateMisc(word) {
-                console.log(`associating: '${word}'`)
+            async onAssociate(type, val) {
+                console.log(`associating ${type}: '${val}'`)
                 await sleep(500)
-                return [word, word + '123', word + '456']
-            }
+                return [val, val + 'xx', val + 'xyz']
+            },
         }
     }
 </script>
