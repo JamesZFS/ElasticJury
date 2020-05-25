@@ -19,6 +19,18 @@ type Param struct {
 	Conditions Conditions
 }
 
+type ResultList []int32
+
+func (l ResultList) ToByteArray() []byte {
+	ids := make([]byte, len(l) * 3)
+	for i, item := range l {
+		ids[i * 3 + 0] = byte((item >>  0) & 0xff)
+		ids[i * 3 + 1] = byte((item >>  8) & 0xff)
+		ids[i * 3 + 2] = byte((item >> 16) & 0xff)
+	}
+	return ids
+}
+
 func (c Conditions) Len() int {
 	return len(c)
 }

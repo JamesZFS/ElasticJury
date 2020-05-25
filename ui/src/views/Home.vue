@@ -189,17 +189,18 @@
                     this.tags.inputs,
                     this.misc.inputs,
                 )
-                if (resp.length === 0) {
+                if (resp.byteLength === 0) {
                     // no result:
                     this.result.ids = []
                     this.result.infos = []
                     this.notFoundTip = true
                 } else {
                     this.result.ids = []
-                    for (let i = 0; i < resp.length / 3; ++ i) {
-                        let id = resp.charCodeAt(i * 3)
-                        id |= (resp.charCodeAt(i * 3 + 1) << 8)
-                        id |= (resp.charCodeAt(i * 3 + 2) << 16)
+                    let bytes = new Uint8Array(resp)
+                    for (let i = 0; i < bytes.length / 3; ++ i) {
+                        let id = bytes[i * 3]
+                        id += bytes[i * 3 + 1] << 8
+                        id += bytes[i * 3 + 2] << 16
                         this.result.ids.push(id)
                     }
                     await this.setPage(1)

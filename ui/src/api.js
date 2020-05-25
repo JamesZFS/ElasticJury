@@ -16,7 +16,6 @@ export async function ping() {
  * @param laws{[string]}
  * @param tags{[string]}
  * @param misc{string}
- * @returns {Promise<{count: int, result: [int]}>}
  */
 export async function searchCaseId(judges, laws, tags, misc) {
     let res = await Axios.post(APIS.SEARCH_CASE_ID, {
@@ -24,7 +23,7 @@ export async function searchCaseId(judges, laws, tags, misc) {
         law: laws.join(','),
         tag: tags.join(','),
         judge: judges.join(',')
-    });
+    }, {responseType: "arraybuffer"});
     return res.data
 }
 

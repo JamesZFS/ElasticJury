@@ -59,7 +59,7 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		result, err := db.searchCaseIds(params, SearchLimit)
 		if err != nil {
 			if err, castSuccess := err.(EmptyParamErr); castSuccess {
-				context.JSON(http.StatusOK, emptyResponse)
+				context.Data(http.StatusOK, "binary", []byte{})
 				fmt.Println(err)
 				return
 			}
@@ -67,7 +67,7 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		}
 
 		// Return
-		context.Data(http.StatusOK, "application/octet-stream", result.sortMapByValue().toByteArray())
+		context.Data(http.StatusOK, "binary", result.ToByteArray())
 	}
 }
 
@@ -148,7 +148,7 @@ func (db database) makeCaseDetailHandler() gin.HandlerFunc {
 	}
 }
 
-func (db database) searchCaseIds(params []Param, limit int) (result searchResultSet, err error) {
+func (db database) searchCaseIds(params []Param, limit int) (result ResultList, err error) {
 	// Create table
 	tableId := time.Now().UnixNano()
 	createTable := fmt.Sprintf(`
@@ -159,14 +159,14 @@ func (db database) searchCaseIds(params []Param, limit int) (result searchResult
 			PRIMARY KEY (item)             # 一对一映射
 		) CHAR SET utf8;`, tableId)
 	if _, err = db.Exec(createTable); err != nil {
-		return searchResultSet{}, err
+		return ResultList{}, err
 	}
 
 	// Drop after finish
 	defer func() {
 		drop := fmt.Sprintf(`DROP TABLE Weights%d`, tableId)
 		if _, errDrop := db.Exec(drop); err == nil && errDrop != nil {
-			result, err = searchResultSet{}, errDrop
+			result, err = ResultList{}, errDrop
 		}
 	}()
 
@@ -186,7 +186,7 @@ func (db database) searchCaseIds(params []Param, limit int) (result searchResult
 				}
 				insert := fmt.Sprintf(`INSERT INTO Weights%d (item, weight) VALUES %s`, tableId, strings.Join(items, ","))
 				if _, err = db.Exec(insert); err != nil {
-					return searchResultSet{}, err
+					return ResultList{}, err
 				}
 			} else {
 				orExpr := GetOrExpr(entryIndex, param.FieldName, param.Conditions)
@@ -214,18 +214,18 @@ func (db database) searchCaseIds(params []Param, limit int) (result searchResult
 	var rows *sql.Rows
 	rows, err = db.Query(query)
 	if err != nil {
-		return searchResultSet{}, err
+		return ResultList{}, err
 	}
-	result = searchResultSet{}
+	result = ResultList{}
 	for rows.Next() {
 		var (
 			caseId int
 			weight float32
 		)
 		if err = rows.Scan(&caseId, &weight); err != nil {
-			return searchResultSet{}, err
+			return ResultList{}, err
 		}
-		result[caseId] = weight
+		result = append(result, int32(caseId))
 	}
 
 	return result, err
