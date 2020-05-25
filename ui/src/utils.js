@@ -48,3 +48,13 @@ export function deduplicate(arr) {
     }
     return res
 }
+
+export function randInt(low, high) {
+    return Math.floor(low + Math.random() * (high - low));
+}
+
+export function randInts(low, high, n) {
+    let res = []
+    for (let i = 0; i < n; ++i) res.push(randInt(low, high))
+    return res
+}
