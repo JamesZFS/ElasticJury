@@ -18,11 +18,14 @@
     </v-expand-transition>
 
     <div class="mx-auto my-5 search-box">
-      <ChipTextInput
-              placeholder="全文检索词..."
-              icon="mdi-feature-search-outline"
-              v-model="words.inputs"
-              :candidates="words.candidates"
+      <v-textarea
+              filled
+              clearable
+              label="综合搜索..."
+              prepend-inner-icon="mdi-search-web"
+              row-height="0"
+              auto-grow
+              v-model="misc.inputs"
       />
       <ChipTextInput
               placeholder="法官名..."
@@ -42,15 +45,6 @@
               v-model="tags.inputs"
               :candidates="tags.candidates"
       />
-      <v-textarea
-              filled
-              clearable
-              label="综合搜索..."
-              prepend-inner-icon="mdi-search-web"
-              row-height="0"
-              auto-grow
-              v-model="misc.inputs"
-      />
     </div>
 
     <v-row justify="center" class="mb-2">
@@ -63,9 +57,9 @@
             v-else
             :items="result.infos"
             @click-case="onClickCase"
-            @click-judge="judge => judges.inputs.push(judge)"
-            @click-law="law => laws.inputs.push(law)"
-            @click-tag="tag => tags.inputs.push(tag)"
+            @click-judge="judge => pushInput(judges.inputs, judge)"
+            @click-law="law => pushInput(laws.inputs, law)"
+            @click-tag="tag => pushInput(tags.inputs, tag)"
     />
     <v-pagination
             v-if="resultLength > 0"
@@ -125,10 +119,6 @@
             casesPerPage: 10,
             notFoundTip: false,
             foundTip: false,
-            words: {
-                inputs: [],
-                candidates: ['调解', '协议', '当事人'],
-            },
             judges: {
                 inputs: [],
                 candidates: ['黄琴英', '高原', '张成镇'],
@@ -154,8 +144,8 @@
                 return Math.ceil(this.result.ids.length / this.casesPerPage)
             },
             searchAble() {
-                return this.words.inputs.length > 0 || this.judges.inputs.length > 0 ||
-                    this.laws.inputs.length > 0 || this.tags.inputs.length > 0 || this.misc.inputs.length > 0
+                return this.judges.inputs.length > 0 || this.laws.inputs.length > 0 ||
+                        this.tags.inputs.length > 0 || this.misc.inputs.length > 0
             },
             resultLength() {
                 return this.result.ids.length
@@ -182,24 +172,26 @@
                 this.loading = false
             },
             parseParams(query) {
-                this.words.inputs = query.word ? query.word.split(',') : []
                 this.judges.inputs = query.judge ? query.judge.split(',') : []
                 this.laws.inputs = query.law ? query.law.split(',') : []
                 this.tags.inputs = query.tag ? query.tag.split(',') : []
             },
             dumpParams() {
                 let query = {};
-                if (this.words.inputs.length > 0) query.word = this.words.inputs.join(',')
                 if (this.judges.inputs.length > 0) query.judge = this.judges.inputs.join(',')
                 if (this.laws.inputs.length > 0) query.law = this.laws.inputs.join(',')
                 if (this.tags.inputs.length > 0) query.tag = this.tags.inputs.join(',')
                 return query
             },
+            pushInput(inputs, item) {
+                if (!inputs.includes(item)) {
+                  inputs.push(item)
+                }
+            },
             async doSearch() {
                 this.loading = true;
                 console.log(this.misc.inputs)
                 let resp = await searchCaseId(
-                    this.words.inputs,
                     this.judges.inputs,
                     this.laws.inputs,
                     this.tags.inputs,

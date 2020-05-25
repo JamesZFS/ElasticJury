@@ -17,7 +17,6 @@ import (
 // Method: POST
 //
 // Queries:
-// 		word: "调解,当事人,..." separated by ','
 // 		tags: "民事案件,一审案件,..." separated by ','
 // 		laws: "中华人民共和国民法通则,《中华人民共和国担保法》,..." separated by ','  quoted by '《》' or not
 // 		judges: "黄琴英,高原,..." separated by ','

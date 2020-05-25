@@ -9,8 +9,7 @@
           {{ new Date().getFullYear() }} — <a href="/"><strong>ElasticJury</strong></a>
         </div>
         <div>
-          Powered by Lyric Zhao and <a href="mailto:zhengfs16@mails.tsinghua.edu.cn">James Zheng</a>,
-          THUCST
+          Powered by <a href="mailto:zhengfs16@mails.tsinghua.edu.cn">James Zheng</a> and <a href="mailto:zhaocg17@mails.tsinghua.edu.cn">Chenggang Zhao</a>, THUCST
         </div>
         <div>
           Icons made by <a href="https://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> from
