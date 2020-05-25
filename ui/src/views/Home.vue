@@ -10,39 +10,42 @@
                 height="250"
         />
         <v-row justify="center" align="center" class="text-center" style="height: 20vh">
-          <h1 class="display-2 font-weight-bold mb-3">
-            Welcome to ElasticJury
+          <h1 class="display-2 font-weight-bold">
+            ElasticJury
           </h1>
         </v-row>
       </div>
     </v-expand-transition>
 
     <div class="mx-auto my-5 search-box">
-      <v-textarea
-              filled
-              label="综合搜索..."
-              prepend-inner-icon="mdi-search-web"
-              row-height="0"
-              auto-grow
-              v-model="misc.inputs"
+      <AutocompleteInput
+              placeholder="综合搜索..."
+              icon="mdi-search-web"
+              v-model="misc.input"
+              :history="misc.history"
+              :on-associate="word => onAssociate('word', word)"
+              ref="miscSearchBox"
       />
       <ChipTextInput
               placeholder="法官名..."
               icon="mdi-account-multiple"
               v-model="judges.inputs"
-              :candidates="judges.candidates"
+              :history="judges.history"
+              :on-associate="judge => onAssociate('judge', judge)"
       />
       <ChipTextInput
               placeholder="法条..."
               icon="mdi-book-open-page-variant"
               v-model="laws.inputs"
-              :candidates="laws.candidates"
+              :history="laws.history"
+              :on-associate="law => onAssociate('law', law)"
       />
       <ChipTextInput
               placeholder="标签..."
               icon="mdi-tag-multiple-outline"
               v-model="tags.inputs"
-              :candidates="tags.candidates"
+              :history="tags.history"
+              :on-associate="tag => onAssociate('tag', tag)"
       />
     </div>
 
@@ -52,7 +55,7 @@
     </v-row>
 
     <v-skeleton-loader v-if="loading" type="table"/>
-    <CaseList
+    <CaseInfoList
             v-else
             :items="result.infos"
             @click-case="onClickCase"
@@ -104,13 +107,16 @@
 </template>
 
 <script>
+    import Vue from 'vue';
     import ChipTextInput from "../components/ChipTextInput";
-    import CaseList from "../components/CaseList";
-    import {getCaseInfo, ping, searchCaseId} from "../api";
+    import CaseInfoList from "../components/CaseInfoList";
+    import AutocompleteInput from "../components/AutocompleteInput";
+    import {getAssociate, getCaseInfo, ping, searchCaseId} from "../api";
+    import {deduplicate} from "../utils";
 
     export default {
         name: 'Home',
-        components: {ChipTextInput, CaseList},
+        components: {AutocompleteInput, ChipTextInput, CaseInfoList},
         data: () => ({
             displayWelcome: true,
             loading: false,
@@ -119,19 +125,20 @@
             notFoundTip: false,
             foundTip: false,
             misc: {
-              inputs: "",
+                input: '',
+                history: ['调解', '纷争', '仲裁'],
             },
             judges: {
                 inputs: [],
-                candidates: ['黄琴英', '高原', '张成镇'],
+                history: ['黄琴英', '高原', '张成镇'],
             },
             laws: {
                 inputs: [],
-                candidates: ['《中华人民共和国民法通则》', '《中华人民共和国民事诉讼法》', '《中华人民共和国担保法》'],
+                history: ['《中华人民共和国民法通则》', '《中华人民共和国民事诉讼法》', '《中华人民共和国担保法》'],
             },
             tags: {
                 inputs: [],
-                candidates: ['民事案件', '一审案件'],
+                history: ['民事案件', '一审案件', '二审案件'],
             },
             result: {
                 ids: [],
@@ -144,71 +151,76 @@
             },
             searchAble() {
                 return this.judges.inputs.length > 0 || this.laws.inputs.length > 0 ||
-                        this.tags.inputs.length > 0 || this.misc.inputs.length > 0
+                    this.tags.inputs.length > 0 || this.misc.input
             },
             resultLength() {
                 return this.result.ids.length
             }
         },
-        mounted() {
+        created() {
             // possibly parse url into search param
             let query = this.$route.query
-            if (query.hasOwnProperty('word') || query.hasOwnProperty('judge') ||
+            if (query.hasOwnProperty('misc') || query.hasOwnProperty('judge') ||
                 query.hasOwnProperty('law') || query.hasOwnProperty('tag')) {
                 this.displayWelcome = false;
                 // parse param from route and do search
                 this.parseParams(query)
                 this.doSearch()
             }
+            this.loadSearchHistories()
         },
         methods: {
-            async setPage(page) {
+            async setPage(to) {
                 this.loading = true
-                this.curPage = page
+                this.curPage = to
                 // load results when page changes
-                let idsToLoad = this.result.ids.slice((this.curPage - 1) * this.casesPerPage, this.curPage * this.casesPerPage)
+                let idsToLoad = this.result.ids.slice((to - 1) * this.casesPerPage, to * this.casesPerPage)
                 this.result.infos = await getCaseInfo(idsToLoad)
                 this.loading = false
             },
             parseParams(query) {
+                this.misc.input = query.misc || ''
                 this.judges.inputs = query.judge ? query.judge.split(',') : []
                 this.laws.inputs = query.law ? query.law.split(',') : []
                 this.tags.inputs = query.tag ? query.tag.split(',') : []
             },
+            dumpParams() {
+                let query = {};
+                if (this.misc.input) query.misc = this.misc.input.slice(0, 200) // limit 200 chars
+                if (this.judges.inputs.length > 0) query.judge = this.judges.inputs.join(',')
+                if (this.laws.inputs.length > 0) query.law = this.laws.inputs.join(',')
+                if (this.tags.inputs.length > 0) query.tag = this.tags.inputs.join(',')
+                return query
+            },
             pushInput(inputs, item) {
                 if (!inputs.includes(item)) {
-                  inputs.push(item)
+                    inputs.push(item)
                 }
             },
             async doSearch() {
                 this.loading = true;
                 let resp = await searchCaseId(
+                    this.misc.input,
                     this.judges.inputs,
                     this.laws.inputs,
                     this.tags.inputs,
-                    this.misc.inputs,
                 )
-                if (resp.byteLength === 0) {
+                if (resp.length === 0) {
                     // no result:
                     this.result.ids = []
                     this.result.infos = []
                     this.notFoundTip = true
                 } else {
-                    this.result.ids = []
-                    let bytes = new Uint8Array(resp)
-                    for (let i = 0; i < bytes.length / 3; ++ i) {
-                        let id = bytes[i * 3]
-                        id += bytes[i * 3 + 1] << 8
-                        id += bytes[i * 3 + 2] << 16
-                        this.result.ids.push(id)
-                    }
+                    this.result.ids = resp
                     await this.setPage(1)
                     this.foundTip = true
+                    this.storeSearchHistories()
                 }
                 this.loading = false
             },
             onSearch() {
                 this.displayWelcome = false
+                this.$router.push({query: this.dumpParams()})
                 this.doSearch()
             },
             async onPing() {
@@ -218,6 +230,29 @@
             onClickCase(id) {
                 let routeData = this.$router.resolve(`detail/${id}`);
                 window.open(routeData.href, '_blank');
+            },
+            async onAssociate(type, val) {
+                console.log(`associating ${type}: '${val}'`)
+                return await getAssociate(type, val)
+            },
+            loadSearchHistories() {
+                if (Vue.$cookies.isKey('misc')) this.misc.history = JSON.parse(Vue.$cookies.get('misc'))
+                for (let type of ['judges', 'laws', 'tags']) {
+                    if (Vue.$cookies.isKey(type)) {
+                        let field = this[type]
+                        field.history = JSON.parse(Vue.$cookies.get(type))
+                    }
+                }
+            },
+            storeSearchHistories() {
+                this.misc.history = deduplicate(this.$refs.miscSearchBox.chosen.concat(this.misc.history)).slice(0, 10)
+                Vue.$cookies.set('misc', JSON.stringify(this.misc.history))
+                this.$refs.miscSearchBox.chosen = []
+                for (let type of ['judges', 'laws', 'tags']) {
+                    let field = this[type]
+                    field.history = deduplicate(field.inputs.concat(field.history)).slice(0, 10)
+                    Vue.$cookies.set(type, JSON.stringify(field.history))
+                }
             },
         }
     }
