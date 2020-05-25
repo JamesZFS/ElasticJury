@@ -3,8 +3,11 @@ package natural
 import (
 	. "ElasticJury/app/common"
 	"encoding/json"
+	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/yanyiwu/gojieba"
 	"io/ioutil"
+	"net/http"
 	"sort"
 	"strings"
 )
@@ -13,15 +16,17 @@ import (
 
 type stringSet map[string]Void
 type stringMap map[string]float32
+type dictMap map[string]Dict
 
 const (
 	useHmm = true
 )
 
 var (
-	stopWords = make(stringSet)
-	idfDict   = make(stringMap)
-	jieba     *gojieba.Jieba
+	stopWords 	= make(stringSet)
+	idfDict   	= make(stringMap)
+	dicts		= make(dictMap)
+	jieba     	*gojieba.Jieba
 )
 
 // Init stopwords set
@@ -47,6 +52,14 @@ func Initialize() {
 	if err != nil {
 		goto ERROR
 	}
+
+	// Dicts
+	dicts["tag"] = BuildDict(TagDictPath)
+	dicts["judge"] = BuildDict(JudgeDictPath)
+	dicts["law"] = BuildDict(LawsDictPath)
+	dicts["word"] = JoinDicts(Dicts{dicts["tag"], dicts["judge"], dicts["law"]})
+
+	// Finish
 	println("[Info] Natural initialized.")
 	return
 
@@ -137,4 +150,27 @@ func ParseFullText(text string) Conditions {
 	reduced := Reduce(words, weights)
 	sort.Sort(reduced)
 	return reduced[:Min(len(reduced), SearchWordLimit)]
+}
+
+func MakeAssociateHandler() gin.HandlerFunc {
+	return func(context *gin.Context) {
+		field := context.Param("field")
+		item := context.Param("item")
+		fmt.Printf("[Associate] Got request:\n")
+		fmt.Printf("[Associate] > Field: %s\n", field)
+		fmt.Printf("[Associate] > Item: %s\n", item)
+
+		dict, ok := dicts[field]
+		if len(item) == 0 || !ok {
+			context.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		items := dict[item]
+		context.JSON(http.StatusOK, gin.H{
+			"count": len(items),
+			"data": items,
+		})
+		fmt.Printf("[Associate] Reply with %d items\n", len(items))
+	}
 }

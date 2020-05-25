@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 )
@@ -21,6 +22,8 @@ type Param struct {
 
 type ResultList []int32
 
+type Strings []string
+
 func (l ResultList) ToByteArray() []byte {
 	ids := make([]byte, len(l) * 3)
 	for i, item := range l {
@@ -29,6 +32,14 @@ func (l ResultList) ToByteArray() []byte {
 		ids[i * 3 + 2] = byte((item >> 16) & 0xff)
 	}
 	return ids
+}
+
+func (c Conditions) ItemArray() []string {
+	var array []string
+	for _, condition := range c {
+		array = append(array, condition.Item)
+	}
+	return array
 }
 
 func (c Conditions) Len() int {
@@ -41,6 +52,18 @@ func (c Conditions) Less(i, j int) bool {
 
 func (c Conditions) Swap(i, j int) {
 	c[i], c[j] = c[j], c[i]
+}
+
+func (s Strings) Len() int {
+	return len(s)
+}
+
+func (s Strings) Less(i, j int) bool {
+	return len(s[i]) < len(s[j])
+}
+
+func (s Strings) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
 }
 
 func MakeDefaultConditions(items []string) Conditions {
@@ -76,6 +99,21 @@ func FilterStrs(strs []string, predicate func(str string) bool) []string {
 		}
 	}
 	return res
+}
+
+func UniqueShuffle(items []string) []string {
+	set := make(map[string]bool)
+	var shuffled []string
+	for _, item := range items {
+		if !set[item] {
+			set[item] = true
+			shuffled = append(shuffled, item)
+		}
+	}
+	rand.Shuffle(len(shuffled), func(i, j int) {
+		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+	})
+	return shuffled
 }
 
 func Min(x, y int) int {

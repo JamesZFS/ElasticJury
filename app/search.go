@@ -34,7 +34,7 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			Law string `json:"law" form:"law"`
 			Judge string `json:"judge" form:"judge"`
 		}
-		if err := context.BindJSON(&json); err != nil && err != io.EOF { // parsing from post data
+		if err := context.BindJSON(&json); err != nil && err != io.EOF { // parsing from post dicts
 			_ = context.AbortWithError(http.StatusBadRequest, err)
 			return
 		}
@@ -84,7 +84,7 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 		var json struct {
 			Id string `json:"id" form:"id"`
 		}
-		if err := context.BindJSON(&json); err != nil && err != io.EOF { // parsing from post data
+		if err := context.BindJSON(&json); err != nil && err != io.EOF { // parsing from post dicts
 			_ = context.AbortWithError(http.StatusBadRequest, err)
 			return
 		}

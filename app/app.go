@@ -2,6 +2,7 @@ package app
 
 import (
 	. "ElasticJury/app/common"
+	"ElasticJury/app/natural"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-sql-driver/mysql"
@@ -54,6 +55,8 @@ func NewApp(databaseName, password string) *App {
 		router.POST("/search", db.makeSearchHandler())
 		// Retrieve case info by case id
 		router.POST("/info", db.makeCaseInfoHandler())
+		// Associate
+		router.GET("/associate/:field/:item", natural.MakeAssociateHandler())
 		// Retrieve case detail by one case id
 		router.GET("/detail/:id", db.makeCaseDetailHandler())
 	}
