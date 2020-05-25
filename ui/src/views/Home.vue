@@ -225,7 +225,7 @@
                 window.open(routeData.href, '_blank');
             },
             async onAssociateMisc(word) {
-                console.log('associating:', word)
+                console.log(`associating: '${word}'`)
                 await sleep(500)
                 return [word, word + '123', word + '456']
             }
