@@ -100,12 +100,3 @@ func GetOrExpr(entry int32, field string, conditions Conditions) string {
 	}
 	return strings.Join(array, " OR ")
 }
-
-func IndexOfStr(strs []string, target string) int {
-	for i, str := range strs {
-		if str == target {
-			return i
-		}
-	}
-	return -1
-}

@@ -47,11 +47,11 @@ func Initialize() {
 	if err != nil {
 		goto ERROR
 	}
-	println("Natural initialized.")
+	println("[Info] Natural initialized.")
 	return
 
 ERROR:
-	println("Initializing natural failed.")
+	println("[Info] Initializing natural failed.")
 	panic(err)
 }
 

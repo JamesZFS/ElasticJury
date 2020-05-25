@@ -39,6 +39,12 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 			return
 		}
 
+		fmt.Printf("[Search] Got request:\n")
+		fmt.Printf("[Search]  > Misc: %s\n", json.Misc)
+		fmt.Printf("[Search]  > Tag: %s\n", json.Tag)
+		fmt.Printf("[Search]  > Law: %s\n", json.Law)
+		fmt.Printf("[Search]  > Judge: %s\n", json.Judge)
+
 		var words Conditions
 		if NotWhiteSpace(json.Misc) {
 			words = natural.ParseFullText(json.Misc)
@@ -60,13 +66,14 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		if err != nil {
 			if err, castSuccess := err.(EmptyParamErr); castSuccess {
 				context.Data(http.StatusOK, "binary", []byte{})
-				fmt.Println(err)
+				fmt.Printf("[Request] Failed with error: %s\n", err.Error())
 				return
 			}
 			panic(err) // unknown
 		}
 
 		// Return
+		fmt.Printf("[Search] Reply with %d cases\n", len(result))
 		context.Data(http.StatusOK, "binary", result.ToByteArray())
 	}
 }
@@ -83,6 +90,8 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 		}
 		idQuery := json.Id
 		ids := strings.Split(idQuery, ",")
+		fmt.Printf("[CaseInfo] Got request:\n")
+		fmt.Printf("[CaseInfo]  > IDs: %s\n", idQuery)
 
 		// Checks
 		for _, id := range ids {
@@ -119,6 +128,7 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 				"detail": detail,
 			})
 		}
+		fmt.Printf("[CaseInfo] Reply with %d infos\n", len(result))
 		context.JSON(http.StatusOK, result)
 	}
 }
@@ -126,6 +136,8 @@ func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 func (db database) makeCaseDetailHandler() gin.HandlerFunc {
 	return func(context *gin.Context) {
 		id, err := strconv.Atoi(context.Param("id"))
+		fmt.Printf("[Detail] Got request:\n")
+		fmt.Printf("[Detail]  > ID: %d\n", id)
 		if id <= 0 || err != nil {
 			_ = context.AbortWithError(http.StatusBadRequest, err)
 			return
@@ -137,6 +149,7 @@ func (db database) makeCaseDetailHandler() gin.HandlerFunc {
 			Scan(&judges, &laws, &tags, &detail, &tree); err != nil {
 			panic(err)
 		}
+		fmt.Printf("[Detail] Reply successfully\n")
 		context.JSON(http.StatusOK, gin.H{
 			"id":     id,
 			"judges": judges,
@@ -201,7 +214,8 @@ func (db database) searchCaseIds(params []Param) (result ResultList, err error) 
 
 	// Search
 	var limit string
-	if SearchLimit > 0 {
+	if // noinspection ALL
+	SearchLimit > 0 {
 		limit = fmt.Sprintf("LIMIT %d", SearchLimit)
 	} else {
 		limit = ""

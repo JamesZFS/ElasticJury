@@ -8,5 +8,5 @@ var Voidance Void
 type EmptyParamErr struct{}
 
 func (e EmptyParamErr) Error() string {
-	return "empty search param"
+	return "Empty search param"
 }

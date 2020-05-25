@@ -37,7 +37,7 @@ func NewApp(databaseName, password string) *App {
 			panic(err) // unknown err
 		}
 	}
-	println("Database initialized.")
+	println("[Info] Database initialized.")
 
 	// Setup router:
 	// Disable Console Color
@@ -57,7 +57,7 @@ func NewApp(databaseName, password string) *App {
 		// Retrieve case detail by one case id
 		router.GET("/detail/:id", db.makeCaseDetailHandler())
 	}
-	println("Search engine initialized.")
+	println("[Info] Search engine initialized.")
 
 	return &App{
 		Engine: router,
