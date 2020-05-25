@@ -19,12 +19,11 @@ export async function ping() {
  * @returns {Promise<{count: int, result: [int]}>}
  */
 export async function searchCaseId(judges, laws, tags, misc) {
-    let res = await Axios.post(APIS.SEARCH_CASE_ID, {misc}, {
-        params: {
-            judge: judges.join(','),
-            law: laws.join(','),
-            tag: tags.join(','),
-        }
+    let res = await Axios.post(APIS.SEARCH_CASE_ID, {
+        misc: misc,
+        law: laws.join(','),
+        tag: tags.join(','),
+        judge: judges.join(',')
     });
     return res.data
 }
@@ -34,8 +33,8 @@ export async function searchCaseId(judges, laws, tags, misc) {
  * @returns {Promise<[{id: int, judges: [string], laws: [strings], tags: [strings], detail: string}]>}
  */
 export async function getCaseInfo(ids) {
-    let res = await Axios.get(APIS.GET_CASE_INFO, {
-        params: {id: ids.join(',')}
+    let res = await Axios.post(APIS.GET_CASE_INFO, {
+        id: ids.join(',')
     });
     res.data.forEach(info => {
         for (let field of ['judges', 'laws', 'tags']) {

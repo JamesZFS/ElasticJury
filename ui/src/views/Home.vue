@@ -119,6 +119,9 @@
             casesPerPage: 10,
             notFoundTip: false,
             foundTip: false,
+            misc: {
+              inputs: "",
+            },
             judges: {
                 inputs: [],
                 candidates: ['黄琴英', '高原', '张成镇'],
@@ -130,9 +133,6 @@
             tags: {
                 inputs: [],
                 candidates: ['民事案件', '一审案件'],
-            },
-            misc: {
-                inputs: "",
             },
             result: {
                 ids: [],
@@ -176,13 +176,6 @@
                 this.laws.inputs = query.law ? query.law.split(',') : []
                 this.tags.inputs = query.tag ? query.tag.split(',') : []
             },
-            dumpParams() {
-                let query = {};
-                if (this.judges.inputs.length > 0) query.judge = this.judges.inputs.join(',')
-                if (this.laws.inputs.length > 0) query.law = this.laws.inputs.join(',')
-                if (this.tags.inputs.length > 0) query.tag = this.tags.inputs.join(',')
-                return query
-            },
             pushInput(inputs, item) {
                 if (!inputs.includes(item)) {
                   inputs.push(item)
@@ -190,7 +183,6 @@
             },
             async doSearch() {
                 this.loading = true;
-                console.log(this.misc.inputs)
                 let resp = await searchCaseId(
                     this.judges.inputs,
                     this.laws.inputs,
@@ -211,7 +203,6 @@
             },
             onSearch() {
                 this.displayWelcome = false
-                this.$router.push({query: this.dumpParams()})
                 this.doSearch()
             },
             async onPing() {

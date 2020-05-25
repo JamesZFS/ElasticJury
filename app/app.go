@@ -50,10 +50,10 @@ func NewApp(databaseName, password string) *App {
 		router.GET("/ping", func(context *gin.Context) {
 			context.String(http.StatusOK, "pong")
 		})
-		// Retrieve case id by word, tag, law, judge
+		// Retrieve case id by tag, law, judge
 		router.POST("/search", db.makeSearchHandler())
 		// Retrieve case info by case id
-		router.GET("/info", db.makeCaseInfoHandler())
+		router.POST("/info", db.makeCaseInfoHandler())
 		// Retrieve case detail by one case id
 		router.GET("/detail/:id", db.makeCaseDetailHandler())
 	}

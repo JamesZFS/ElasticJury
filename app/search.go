@@ -30,6 +30,9 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		// Parse content
 		var json struct {
 			Misc string `json:"misc" form:"misc"`
+			Tag string `json:"tag" form:"tag"`
+			Law string `json:"law" form:"law"`
+			Judge string `json:"judge" form:"judge"`
 		}
 		if err := context.BindJSON(&json); err != nil && err != io.EOF { // parsing from post data
 			_ = context.AbortWithError(http.StatusBadRequest, err)
@@ -37,13 +40,12 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		}
 
 		var words Conditions
-		misc := context.Query("word") + " " + json.Misc
-		if NotWhiteSpace(misc) {
-			words = natural.ParseFullText(misc)
+		if NotWhiteSpace(json.Misc) {
+			words = natural.ParseFullText(json.Misc)
 		}
-		tags := natural.PreprocessWords(strings.Split(context.Query("tag"), ","))
-		laws := natural.PreprocessWords(strings.Split(context.Query("law"), ","))
-		judges := natural.PreprocessWords(strings.Split(context.Query("judge"), ","))
+		tags := natural.PreprocessWords(strings.Split(json.Tag, ","))
+		laws := natural.PreprocessWords(strings.Split(json.Law, ","))
+		judges := natural.PreprocessWords(strings.Split(json.Judge, ","))
 
 		// Params
 		params := []Param{
@@ -71,7 +73,15 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 
 func (db database) makeCaseInfoHandler() gin.HandlerFunc {
 	return func(context *gin.Context) {
-		idQuery := context.Query("id")
+		// Parse content
+		var json struct {
+			Id string `json:"id" form:"id"`
+		}
+		if err := context.BindJSON(&json); err != nil && err != io.EOF { // parsing from post data
+			_ = context.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+		idQuery := json.Id
 		ids := strings.Split(idQuery, ",")
 
 		// Checks
