@@ -105,11 +105,12 @@
 </template>
 
 <script>
+    import Vue from 'vue';
     import ChipTextInput from "../components/ChipTextInput";
     import CaseInfoList from "../components/CaseInfoList";
     import AutocompleteInput from "../components/AutocompleteInput";
     import {getCaseInfo, ping, searchCaseId} from "../api";
-    import {sleep} from "../utils";
+    import {deduplicate, sleep} from "../utils";
 
     export default {
         name: 'Home',
@@ -134,7 +135,7 @@
             },
             tags: {
                 inputs: [],
-                history: ['民事案件', '一审案件'],
+                history: ['民事案件', '一审案件', '二审案件'],
             },
             result: {
                 ids: [],
@@ -162,6 +163,13 @@
                 // parse param from route and do search
                 this.parseParams(query)
                 this.doSearch()
+            }
+            // load histories
+            for (let type of ['judges', 'laws', 'tags']) {
+                if (Vue.$cookies.isKey(type)) {
+                    let field = this[type]
+                    field.history = JSON.parse(Vue.$cookies.get(type))
+                }
             }
         },
         methods: {
@@ -209,6 +217,13 @@
                     this.result.ids = resp
                     await this.setPage(1)
                     this.foundTip = true
+                    // update search history
+                    for (let type of ['judges', 'laws', 'tags']) {
+                        let field = this[type]
+                        field.history = deduplicate(field.inputs.concat(field.history)).slice(0, 10)
+                        console.log(field.history)
+                        Vue.$cookies.set(type, JSON.stringify(field.history))
+                    }
                 }
                 this.loading = false
             },
