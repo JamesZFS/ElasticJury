@@ -53,6 +53,7 @@
                   {{item.detail.slice(0, 300)}}
                 </span>
                 <span v-if="item.detail.length > 300">...</span>
+                <a @click="$emit('click-case', item.id)"> 显示更多 </a>
               </div>
 
             </div>

@@ -6,6 +6,13 @@
             :elevation="5"
             class="my-4"
     >
+      <v-btn text absolute
+             @click="onClickRelating"
+             class="ma-4"
+             style="right: 0"
+             color="primary">
+        相关案件
+      </v-btn>
       <v-card-title class="justify-center headline">
         案件 {{id}}
       </v-card-title>
@@ -151,13 +158,17 @@
                 this.sideView.header = attr.key
                 this.sideView.content = attr.value
             },
+            onClickRelating() {
+                let routeData = this.$router.resolve(`/?misc=${this.detail.slice(0, 200)}`); // limit 200 chars
+                window.open(routeData.href, '_blank');
+            },
             filter(item, search) {
                 if (item.attributes) {
                     return item.attributes.key.indexOf(search) >= 0 || item.attributes.value.indexOf(search) >= 0
                 } else {
                     return false
                 }
-            }
+            },
         }
     }
 </script>
