@@ -56,7 +56,7 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		}
 
 		// Perform searching
-		result, err := db.searchCaseIds(params, SearchLimit)
+		result, err := db.searchCaseIds(params)
 		if err != nil {
 			if err, castSuccess := err.(EmptyParamErr); castSuccess {
 				context.Data(http.StatusOK, "binary", []byte{})
@@ -148,7 +148,7 @@ func (db database) makeCaseDetailHandler() gin.HandlerFunc {
 	}
 }
 
-func (db database) searchCaseIds(params []Param, limit int) (result ResultList, err error) {
+func (db database) searchCaseIds(params []Param) (result ResultList, err error) {
 	// Create table
 	tableId := time.Now().UnixNano()
 	createTable := fmt.Sprintf(`
@@ -200,17 +200,17 @@ func (db database) searchCaseIds(params []Param, limit int) (result ResultList, 
 	}
 
 	// Search
-	var limitSQL string
-	if limit > 0 {
-		limitSQL = fmt.Sprintf("LIMIT %d", limit)
+	var limit string
+	if SearchLimit > 0 {
+		limit = fmt.Sprintf("LIMIT %d", SearchLimit)
 	} else {
-		limitSQL = ""
+		limit = ""
 	}
 	query := fmt.Sprintf(`
 		SELECT b.caseId AS caseId, sum(b.weight * a.weight) AS weight
 		FROM Weights%d a%s
 		WHERE %s
-		GROUP BY caseId ORDER BY weight DESC %s`, tableId, tables, conditions, limitSQL)
+		GROUP BY caseId ORDER BY weight DESC %s`, tableId, tables, conditions, limit)
 	var rows *sql.Rows
 	rows, err = db.Query(query)
 	if err != nil {
@@ -225,7 +225,9 @@ func (db database) searchCaseIds(params []Param, limit int) (result ResultList, 
 		if err = rows.Scan(&caseId, &weight); err != nil {
 			return ResultList{}, err
 		}
-		result = append(result, int32(caseId))
+		if weight > SearchFilter {
+			result = append(result, int32(caseId))
+		}
 	}
 
 	return result, err

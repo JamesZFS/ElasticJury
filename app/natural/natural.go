@@ -117,12 +117,14 @@ func GetWordsWeights(words []string) []float32 {
 	if inDictCount == 0 {
 		mean = 1.0
 	} else {
-		mean /= float32(inDictCount) * 2
+		mean /= float32(inDictCount)
 	}
 	for i, word := range words {
 		_, in := idfDict[word]
 		if !in {
 			weights[i] = mean
+		} else {
+			weights[i] += mean / 2
 		}
 	}
 	return weights

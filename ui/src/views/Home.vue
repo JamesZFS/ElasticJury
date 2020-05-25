@@ -20,7 +20,6 @@
     <div class="mx-auto my-5 search-box">
       <v-textarea
               filled
-              clearable
               label="综合搜索..."
               prepend-inner-icon="mdi-search-web"
               row-height="0"
