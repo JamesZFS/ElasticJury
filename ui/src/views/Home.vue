@@ -22,7 +22,9 @@
               placeholder="综合搜索..."
               icon="mdi-search-web"
               v-model="misc.input"
+              :history="misc.history"
               :on-associate="word => onAssociate('word', word)"
+              ref="miscSearchBox"
       />
       <ChipTextInput
               placeholder="法官名..."
@@ -109,8 +111,8 @@
     import ChipTextInput from "../components/ChipTextInput";
     import CaseInfoList from "../components/CaseInfoList";
     import AutocompleteInput from "../components/AutocompleteInput";
-    import {getCaseInfo, ping, searchCaseId} from "../api";
-    import {deduplicate, sleep} from "../utils";
+    import {getAssociate, getCaseInfo, ping, searchCaseId} from "../api";
+    import {deduplicate} from "../utils";
 
     export default {
         name: 'Home',
@@ -124,6 +126,7 @@
             foundTip: false,
             misc: {
                 input: '',
+                history: ['调解', '纷争', '仲裁'],
             },
             judges: {
                 inputs: [],
@@ -164,13 +167,7 @@
                 this.parseParams(query)
                 this.doSearch()
             }
-            // load histories
-            for (let type of ['judges', 'laws', 'tags']) {
-                if (Vue.$cookies.isKey(type)) {
-                    let field = this[type]
-                    field.history = JSON.parse(Vue.$cookies.get(type))
-                }
-            }
+            this.loadSearchHistories()
         },
         methods: {
             async setPage(to) {
@@ -217,13 +214,7 @@
                     this.result.ids = resp
                     await this.setPage(1)
                     this.foundTip = true
-                    // update search history
-                    for (let type of ['judges', 'laws', 'tags']) {
-                        let field = this[type]
-                        field.history = deduplicate(field.inputs.concat(field.history)).slice(0, 10)
-                        console.log(field.history)
-                        Vue.$cookies.set(type, JSON.stringify(field.history))
-                    }
+                    this.storeSearchHistories()
                 }
                 this.loading = false
             },
@@ -242,8 +233,26 @@
             },
             async onAssociate(type, val) {
                 console.log(`associating ${type}: '${val}'`)
-                await sleep(500)
-                return [val, val + 'xx', val + 'xyz']
+                return await getAssociate(type, val)
+            },
+            loadSearchHistories() {
+                if (Vue.$cookies.isKey('misc')) this.misc.history = JSON.parse(Vue.$cookies.get('misc'))
+                for (let type of ['judges', 'laws', 'tags']) {
+                    if (Vue.$cookies.isKey(type)) {
+                        let field = this[type]
+                        field.history = JSON.parse(Vue.$cookies.get(type))
+                    }
+                }
+            },
+            storeSearchHistories() {
+                this.misc.history = deduplicate(this.$refs.miscSearchBox.chosen.concat(this.misc.history)).slice(0, 10)
+                Vue.$cookies.set('misc', JSON.stringify(this.misc.history))
+                this.$refs.miscSearchBox.chosen = []
+                for (let type of ['judges', 'laws', 'tags']) {
+                    let field = this[type]
+                    field.history = deduplicate(field.inputs.concat(field.history)).slice(0, 10)
+                    Vue.$cookies.set(type, JSON.stringify(field.history))
+                }
             },
         }
     }

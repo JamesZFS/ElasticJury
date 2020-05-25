@@ -5,6 +5,7 @@ export const APIS = {
     SEARCH_CASE_ID: '/api/search',
     GET_CASE_INFO: '/api/info',
     GET_CASE_DETAIL: '/api/detail/:id',
+    GET_ASSOCIATE: '/api/associate/:field/:word'
 }
 
 export async function ping() {
@@ -63,4 +64,15 @@ export async function getCaseDetail(id) {
         data[field] = data[field].split('#').map(s => s.trim()).filter(s => s.length > 0)
     }
     return data
+}
+
+/**
+ *
+ * @param field{string}
+ * @param word{string}
+ * @return {Promise<[string]>}
+ */
+export async function getAssociate(field, word) {
+    let res = await Axios.get(APIS.GET_ASSOCIATE.replace(':field', field).replace(':word', word))
+    return res.data.data
 }

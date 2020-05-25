@@ -46,7 +46,7 @@
             async search(chip) { // maybe auto complete
                 this.candidates = []
                 let turn = ++this.turn
-                await sleep(1000)
+                await sleep(500)
                 if (turn !== this.turn) return // only refresh when this is the most recent call
                 if (!chip) {
                     this.candidates = this.history
