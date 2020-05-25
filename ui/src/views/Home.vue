@@ -189,13 +189,19 @@
                     this.tags.inputs,
                     this.misc.inputs,
                 )
-                if (resp.count === 0) {
+                if (resp.length === 0) {
                     // no result:
                     this.result.ids = []
                     this.result.infos = []
                     this.notFoundTip = true
                 } else {
-                    this.result.ids = resp.result
+                    this.result.ids = []
+                    for (let i = 0; i < resp.length / 3; ++ i) {
+                        let id = resp.charCodeAt(i * 3)
+                        id |= (resp.charCodeAt(i * 3 + 1) << 8)
+                        id |= (resp.charCodeAt(i * 3 + 2) << 16)
+                        this.result.ids.push(id)
+                    }
                     await this.setPage(1)
                     this.foundTip = true
                 }

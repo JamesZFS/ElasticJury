@@ -11,6 +11,6 @@ const (
 	InitTestDataScriptPath = "database/init-test-data.sql"
 	IdfDictPath			   = "preprocessor/idf_dict.json"
 	StopWordsPath          = "preprocessor/stopwords.txt"
-	SearchLimit            = 200
+	SearchLimit            = 0 // zero for no limit
 	SearchWordLimit		   = 20
 )

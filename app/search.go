@@ -67,7 +67,7 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		}
 
 		// Return
-		context.JSON(http.StatusOK, result.sortMapByValue().toResponse())
+		context.Data(http.StatusOK, "application/octet-stream", result.sortMapByValue().toByteArray())
 	}
 }
 
@@ -200,11 +200,17 @@ func (db database) searchCaseIds(params []Param, limit int) (result searchResult
 	}
 
 	// Search
+	var limitSQL string
+	if limit > 0 {
+		limitSQL = fmt.Sprintf("LIMIT %d", limit)
+	} else {
+		limitSQL = ""
+	}
 	query := fmt.Sprintf(`
 		SELECT b.caseId AS caseId, sum(b.weight * a.weight) AS weight
 		FROM Weights%d a%s
 		WHERE %s
-		GROUP BY caseId ORDER BY weight DESC LIMIT %d`, tableId, tables, conditions, limit)
+		GROUP BY caseId ORDER BY weight DESC %s`, tableId, tables, conditions, limitSQL)
 	var rows *sql.Rows
 	rows, err = db.Query(query)
 	if err != nil {

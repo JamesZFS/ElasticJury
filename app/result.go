@@ -65,6 +65,17 @@ func (s searchResultSet) sortMapByValue() pairList {
 	return p
 }
 
+// To ByteArray
+func (p pairList) toByteArray() []byte {
+	ids := make([]byte, len(p) * 3)
+	for i, pr := range p {
+		ids[i * 3 + 0] = byte((pr.caseId >>  0) & 0xff)
+		ids[i * 3 + 1] = byte((pr.caseId >>  8) & 0xff)
+		ids[i * 3 + 2] = byte((pr.caseId >> 16) & 0xff)
+	}
+	return ids
+}
+
 // To http response body
 func (p pairList) toResponse() gin.H {
 	ids := make([]int, len(p))
