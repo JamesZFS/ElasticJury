@@ -2,7 +2,6 @@ package natural
 
 import (
 	. "ElasticJury/app/common"
-	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/yanyiwu/gojieba"
@@ -18,13 +17,8 @@ type stringSet map[string]Void
 type stringMap map[string]float32
 type dictMap map[string]Dict
 
-const (
-	useHmm = true
-)
-
 var (
 	stopWords 	= make(stringSet)
-	idfDict   	= make(stringMap)
 	dicts		= make(dictMap)
 	jieba     	*gojieba.Jieba
 )
@@ -34,7 +28,8 @@ func Initialize() {
 	// Stopwords
 	bytes, err := ioutil.ReadFile(StopWordsPath)
 	if err != nil {
-		goto ERROR
+		println("[Info] Initializing natural failed.")
+		panic(err)
 	}
 	for _, word := range strings.Split(string(bytes), "\n") {
 		stopWords[word] = Voidance
@@ -42,16 +37,6 @@ func Initialize() {
 
 	// Jieba
 	jieba = gojieba.NewJieba()
-
-	// Idf dictionary
-	bytes, err = ioutil.ReadFile(IdfDictPath)
-	if err != nil {
-		goto ERROR
-	}
-	err = json.Unmarshal(bytes, &idfDict)
-	if err != nil {
-		goto ERROR
-	}
 
 	// Dicts
 	dicts["tag"] = BuildDict(TagDictPath)
@@ -62,10 +47,6 @@ func Initialize() {
 	// Finish
 	println("[Info] Natural initialized.")
 	return
-
-ERROR:
-	println("[Info] Initializing natural failed.")
-	panic(err)
 }
 
 func Finalize() {
@@ -115,43 +96,28 @@ func Reduce(words []string, weights []float32) Conditions {
 	return reduced
 }
 
-func GetWordsWeights(words []string) []float32 {
-	weights := make([]float32, len(words))
-	var mean float32
-	inDictCount := 0
-	for i, word := range words {
-		v, in := idfDict[word]
-		if in {
-			mean += v
-			inDictCount++
-			weights[i] = v
-		}
-	}
-	if inDictCount == 0 {
-		mean = 1.0
-	} else {
-		mean /= float32(inDictCount)
-	}
-	var max float32
-	for i := range words {
-		weights[i] = weights[i] + mean
-		if weights[i] > max {
-			max = weights[i]
-		}
-	}
-	for i := range weights {
-		weights[i] /= max
-	}
-	return weights
-}
-
 // Parse misc text into words
 func ParseFullText(text string) Conditions {
-	words := PreprocessWords(jieba.CutForSearch(text, useHmm))
-	weights := GetWordsWeights(words)
+	all := jieba.ExtractWithWeight(text, SearchWordLimit)
+	words := make([]string, len(all))
+	weights := make([]float32, len(all))
+	var mean float32
+	for i := range all {
+		words[i] = all[i].Word
+		weights[i] = float32(all[i].Weight)
+		mean += weights[i]
+	}
+	if len(all) > 0 {
+		mean /= float32(len(all))
+	} else {
+		mean = 1.0
+	}
+	for i := range all {
+		weights[i] += mean / 2
+	}
 	reduced := Reduce(words, weights)
 	sort.Sort(reduced)
-	return reduced[:Min(len(reduced), SearchWordLimit)]
+	return reduced
 }
 
 func MakeAssociateHandler() gin.HandlerFunc {

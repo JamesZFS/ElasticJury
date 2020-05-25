@@ -231,6 +231,7 @@ func (db database) searchCaseIds(params []Param) (result ResultList, err error) 
 		return ResultList{}, err
 	}
 	result = ResultList{}
+	filter := float32(-1)
 	for rows.Next() {
 		var (
 			caseId int
@@ -239,8 +240,11 @@ func (db database) searchCaseIds(params []Param) (result ResultList, err error) 
 		if err = rows.Scan(&caseId, &weight); err != nil {
 			return ResultList{}, err
 		}
-		if weight > SearchFilter {
+		if weight > filter {
 			result = append(result, int32(caseId))
+			if filter < 0 {
+				filter = SearchFilter * weight
+			}
 		}
 	}
 
