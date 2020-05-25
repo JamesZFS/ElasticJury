@@ -16,12 +16,12 @@ import (
 // Handle search case id by words/tags/laws/judges
 // Method: POST
 //
-// Queries:
-// 		tags: "民事案件,一审案件,..." separated by ','
-// 		laws: "中华人民共和国民法通则,《中华人民共和国担保法》,..." separated by ','  quoted by '《》' or not
-// 		judges: "黄琴英,高原,..." separated by ','
+// Query:
+// 		tag: "民事案件,一审案件,..." separated by ','
+// 		law: "中华人民共和国民法通则,《中华人民共和国担保法》,..." separated by ','  quoted by '《》' or not
+// 		judge: "黄琴英,高原,..." separated by ','
 //
-// Params(json):
+// Body(json):
 //      misc: miscellaneous searching field, a text representing a case description. This field will be automatically
 //			divided into the four fields above for searching.
 //
@@ -29,9 +29,9 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 	return func(context *gin.Context) {
 		// Parse content
 		var json struct {
-			Misc string `json:"misc" form:"misc"`
-			Tag string `json:"tag" form:"tag"`
-			Law string `json:"law" form:"law"`
+			Misc  string `json:"misc" form:"misc"`
+			Tag   string `json:"tag" form:"tag"`
+			Law   string `json:"law" form:"law"`
 			Judge string `json:"judge" form:"judge"`
 		}
 		if err := context.BindJSON(&json); err != nil && err != io.EOF { // parsing from post dicts

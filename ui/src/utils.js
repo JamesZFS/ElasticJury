@@ -28,3 +28,23 @@ function walkNode(tree, counter) {
     }
     return counter
 }
+
+/**
+ * @param millis{number}
+ * @return {Promise<any>}
+ */
+export async function sleep(millis) {
+    return new Promise(resolve => setTimeout(resolve, millis))
+}
+
+/**
+ * @param arr{Array}
+ * @return {Array}
+ */
+export function deduplicate(arr) {
+    let res = []
+    for (let a of arr) {
+        if (res.indexOf(a) < 0) res.push(a)
+    }
+    return res
+}

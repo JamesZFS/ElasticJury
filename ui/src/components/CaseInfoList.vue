@@ -66,7 +66,6 @@
 
 <script>
     export default {
-        name: "CaseList",
         props: {
             items: Array,
         },

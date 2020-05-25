@@ -1,47 +1,64 @@
 <template>
-  <!--            @input="$emit('input', $event.target.value)"-->
   <v-combobox
           :value="value"
           @input="onInput"
+          :search-input.sync="search"
           :items="candidates"
           chips
           clearable
           :label="placeholder"
           multiple
           flat
+          deletable-chips
           solo-inverted
+          hide-selected
           :prepend-inner-icon="icon"
+          :loading="loading"
   >
-    <template v-slot:selection="{ attrs, item, select, selected }">
-      <v-chip
-              v-bind="attrs"
-              :input-value="selected"
-              close
-              @click="select"
-              @click:close="remove(item)"
-      >
-        <strong>{{ item }}</strong>
-      </v-chip>
-    </template>
   </v-combobox>
 </template>
 
 <script>
+    import {sleep} from "../utils";
+
     export default {
         props: {
             placeholder: String,
-            candidates: Array,
+            history: Array,
             value: Array,  // for v-model
             icon: String,
+            onAssociate: Function,
         },
+        data: () => ({
+            loading: false,
+            turn: 0,
+            candidates: [],
+            search: '',
+        }),
         methods: {
-            remove(item) {
-                this.value.splice(this.value.indexOf(item), 1);
+            onInput(val) {
+                this.candidates = []
+                this.search = ''
+                this.$emit('input', val)
             },
-            onInput(value) {
-                this.$emit('input', value)
-            }
         },
+        watch: {
+            async search(chip) { // maybe auto complete
+                this.candidates = []
+                let turn = ++this.turn
+                await sleep(500)
+                if (turn !== this.turn) return // only refresh when this is the most recent call
+                if (!chip) {
+                    this.candidates = this.history
+                    return
+                }
+                // perform searching (let parent component handle)
+                this.loading = true
+                // noinspection JSCheckFunctionSignatures
+                this.candidates = await this.onAssociate(chip)
+                this.loading = false
+            },
+        }
     }
 </script>
 
