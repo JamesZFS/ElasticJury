@@ -1,8 +1,7 @@
 <template>
-  <!--            @input="$emit('input', $event.target.value)"-->
   <v-combobox
           :value="value"
-          @input="onInput"
+          @input="val => $emit('input', val)"
           :items="candidates"
           chips
           clearable
@@ -38,9 +37,6 @@
             remove(item) {
                 this.value.splice(this.value.indexOf(item), 1);
             },
-            onInput(value) {
-                this.$emit('input', value)
-            }
         },
     }
 </script>

@@ -10,21 +10,20 @@
                 height="250"
         />
         <v-row justify="center" align="center" class="text-center" style="height: 20vh">
-          <h1 class="display-2 font-weight-bold mb-3">
-            Welcome to ElasticJury
+          <h1 class="display-2 font-weight-bold">
+            ElasticJury
           </h1>
         </v-row>
       </div>
     </v-expand-transition>
 
     <div class="mx-auto my-5 search-box">
-      <v-textarea
-              filled
-              label="综合搜索..."
-              prepend-inner-icon="mdi-search-web"
-              row-height="0"
-              auto-grow
+      <AutocompleteInput
+              placeholder="综合搜索..."
+              icon="mdi-search-web"
               v-model="misc.input"
+              :candidates="misc.candidates"
+              :on-associate="onAssociateMisc"
       />
       <ChipTextInput
               placeholder="法官名..."
@@ -52,7 +51,7 @@
     </v-row>
 
     <v-skeleton-loader v-if="loading" type="table"/>
-    <CaseList
+    <CaseInfoList
             v-else
             :items="result.infos"
             @click-case="onClickCase"
@@ -105,12 +104,14 @@
 
 <script>
     import ChipTextInput from "../components/ChipTextInput";
-    import CaseList from "../components/CaseList";
+    import CaseInfoList from "../components/CaseInfoList";
+    import AutocompleteInput from "../components/AutocompleteInput";
     import {getCaseInfo, ping, searchCaseId} from "../api";
+    import {sleep} from "../utils";
 
     export default {
         name: 'Home',
-        components: {ChipTextInput, CaseList},
+        components: {AutocompleteInput, ChipTextInput, CaseInfoList},
         data: () => ({
             displayWelcome: true,
             loading: false,
@@ -119,7 +120,8 @@
             notFoundTip: false,
             foundTip: false,
             misc: {
-                input: "",
+                input: '',
+                candidates: ['调解', '公司', '当事人'],
             },
             judges: {
                 inputs: [],
@@ -144,7 +146,7 @@
             },
             searchAble() {
                 return this.judges.inputs.length > 0 || this.laws.inputs.length > 0 ||
-                    this.tags.inputs.length > 0 || this.misc.input.length > 0
+                    this.tags.inputs.length > 0 || this.misc.input
             },
             resultLength() {
                 return this.result.ids.length
@@ -162,11 +164,11 @@
             }
         },
         methods: {
-            async setPage(page) {
+            async setPage(to) {
                 this.loading = true
-                this.curPage = page
+                this.curPage = to
                 // load results when page changes
-                let idsToLoad = this.result.ids.slice((this.curPage - 1) * this.casesPerPage, this.curPage * this.casesPerPage)
+                let idsToLoad = this.result.ids.slice((to - 1) * this.casesPerPage, to * this.casesPerPage)
                 this.result.infos = await getCaseInfo(idsToLoad)
                 this.loading = false
             },
@@ -178,7 +180,7 @@
             },
             dumpParams() {
                 let query = {};
-                if (this.misc.input.length > 0) query.misc = this.misc.input
+                if (this.misc.input) query.misc = this.misc.input.slice(0, 200) // limit 200 chars
                 if (this.judges.inputs.length > 0) query.judge = this.judges.inputs.join(',')
                 if (this.laws.inputs.length > 0) query.law = this.laws.inputs.join(',')
                 if (this.tags.inputs.length > 0) query.tag = this.tags.inputs.join(',')
@@ -222,6 +224,11 @@
                 let routeData = this.$router.resolve(`detail/${id}`);
                 window.open(routeData.href, '_blank');
             },
+            async onAssociateMisc(word) {
+                console.log('associating:', word)
+                await sleep(500)
+                return [word, word + '123', word + '456']
+            }
         }
     }
 </script>

@@ -28,3 +28,11 @@ function walkNode(tree, counter) {
     }
     return counter
 }
+
+/**
+ * @param millis{number}
+ * @return {Promise<any>}
+ */
+export async function sleep(millis) {
+    return new Promise(resolve => setTimeout(resolve, millis))
+}
