@@ -15,7 +15,7 @@ type database struct {
 
 func newDatabase(databaseName, password string) (database, error) {
 	dataSourceName := strings.Replace(strings.Replace(DataSourceName, "<password>", password, 1), "<database>", databaseName, 1)
-	fmt.Printf("Using dicts source: %s\n", dataSourceName)
+	fmt.Printf("[Database] Connecting to %s\n", dataSourceName)
 	db, err := sql.Open("mysql", dataSourceName)
 	if err == nil {
 		db.SetConnMaxLifetime(DBConnMaxLifeTime)

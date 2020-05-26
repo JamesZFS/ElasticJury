@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 type Dict map[string]Strings
@@ -54,15 +55,15 @@ func BuildDict(path string) Dict {
 		index := TitleMarkFilter(kv[0])
 		weight, _ := strconv.ParseFloat(kv[1], 32)
 		condition := Condition{Item: full, Weight: float32(weight)}
-		for i := range index {
-			key := index[:i]
+		for i, l := 0, utf8.RuneCountInString(index); i < l; i++ {
+			key := Substring(index, 0, i+1)
 			conditionMap[key] = append(conditionMap[key], condition)
 		}
 
 		words := jieba.CutForSearch(index, true)
 		for _, word := range words {
-			for i := range word {
-				key := word[:i]
+			for i, l := 0, utf8.RuneCountInString(word); i < l; i++ {
+				key := Substring(word, 0, i+1)
 				conditionMap[key] = append(conditionMap[key], condition)
 			}
 		}
