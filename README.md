@@ -1,4 +1,4 @@
-# ElasticJury
+# ElasticJury 0.1.1
 
 An archetypical search engine for judiciary cases.
 
