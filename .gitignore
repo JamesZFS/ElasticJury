@@ -7,3 +7,14 @@
 # Editor directories and files
 .idea
 .vscode
+
+# Large dataset
+dataset
+
+# Python cache
+__pycache__
+
+*.http
+
+# Large dictionary
+dicts
