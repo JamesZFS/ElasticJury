@@ -22,8 +22,7 @@ import (
 // 		judge: "黄琴英,高原,..." separated by ','
 //
 // Body(json):
-//      misc: miscellaneous searching field, a text representing a case description. This field will be automatically
-//			divided into the four fields above for searching.
+//      misc: miscellaneous searching field, a text representing a case description.
 //
 func (db database) makeSearchHandler() gin.HandlerFunc {
 	return func(context *gin.Context) {
