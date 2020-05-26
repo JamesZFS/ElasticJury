@@ -51,7 +51,7 @@
 
     <v-row justify="center" class="mb-2">
       <v-btn @click="onSearch" color="primary" :disabled="!searchAble">Search</v-btn>
-      <v-btn @click="onPing" class="ml-10" color="secondary">Ping</v-btn>
+      <v-btn @click="onDart" class="ml-10" color="secondary">I'm Feeling Lucky</v-btn>
     </v-row>
 
     <v-skeleton-loader v-if="loading" type="table"/>
@@ -111,8 +111,8 @@
     import ChipTextInput from "../components/ChipTextInput";
     import CaseInfoList from "../components/CaseInfoList";
     import AutocompleteInput from "../components/AutocompleteInput";
-    import {getAssociate, getCaseInfo, ping, searchCaseId} from "../api";
-    import {deduplicate} from "../utils";
+    import {getAssociate, getCaseInfo, searchCaseId} from "../api";
+    import {deduplicate, randInts} from "../utils";
 
     export default {
         name: 'Home',
@@ -223,9 +223,12 @@
                 this.$router.push({query: this.dumpParams()})
                 this.doSearch()
             },
-            async onPing() {
-                let resp = await ping()
-                alert(resp)
+            async onDart() { // random results
+                this.loading = true
+                this.result.ids = randInts(1, 162352, 10)
+                this.displayWelcome = false
+                await this.setPage(1)
+                this.loading = false
             },
             onClickCase(id) {
                 let routeData = this.$router.resolve(`detail/${id}`);

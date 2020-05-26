@@ -7,9 +7,11 @@
       <v-col class="text-center" cols="12">
         <div>
           {{ new Date().getFullYear() }} — <a href="/"><strong>ElasticJury</strong></a>
+          &nbsp;<a @click="onPing">Ping</a>
         </div>
         <div>
-          Powered by <a href="mailto:zhengfs16@mails.tsinghua.edu.cn">Fengshi Zheng</a> and <a href="mailto:zhaocg17@mails.tsinghua.edu.cn">Chenggang Zhao</a>, THUCST
+          Powered by <a href="mailto:zhengfs16@mails.tsinghua.edu.cn">Fengshi Zheng</a>
+          and <a href="mailto:zhaocg17@mails.tsinghua.edu.cn">Chenggang Zhao</a>, THUCST
         </div>
         <div>
           Icons made by <a href="https://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> from
@@ -21,11 +23,15 @@
 </template>
 
 <script>
+    import {ping} from "./api";
+
     export default {
         name: 'App',
-
-        data: () => ({
-            //
-        }),
+        methods: {
+            async onPing() {
+                let resp = await ping()
+                alert(resp)
+            },
+        }
     };
 </script>
