@@ -226,6 +226,7 @@
             async onDart() { // random results
                 this.loading = true
                 this.result.ids = randInts(1, 162352, 10)
+                this.displayWelcome = false
                 await this.setPage(1)
                 this.loading = false
             },
