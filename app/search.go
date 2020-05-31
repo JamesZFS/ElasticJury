@@ -39,7 +39,12 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		}
 
 		fmt.Printf("[Search] Got request:\n")
-		fmt.Printf("[Search]  > Misc: %s\n", json.Misc)
+		miscLen := len(json.Misc)
+		if miscLen <= 100 {
+			fmt.Printf("[Search]  > Misc: %s\n", json.Misc)
+		} else {
+			fmt.Printf("[Search]  > Misc: %s...%s\n", json.Misc[:50], json.Misc[miscLen-50:])
+		}
 		fmt.Printf("[Search]  > Tag: %s\n", json.Tag)
 		fmt.Printf("[Search]  > Law: %s\n", json.Law)
 		fmt.Printf("[Search]  > Judge: %s\n", json.Judge)
@@ -137,7 +142,7 @@ func (db database) makeCaseDetailHandler() gin.HandlerFunc {
 		id, err := strconv.Atoi(context.Param("id"))
 		fmt.Printf("[Detail] Got request:\n")
 		fmt.Printf("[Detail]  > ID: %d\n", id)
-		if id <= 0 || err != nil {
+		if err != nil {
 			_ = context.AbortWithError(http.StatusBadRequest, err)
 			return
 		}
@@ -146,7 +151,12 @@ func (db database) makeCaseDetailHandler() gin.HandlerFunc {
 		)
 		if err := db.QueryRow("SELECT judges, laws, tags, detail, tree FROM Cases WHERE id = ?", id).
 			Scan(&judges, &laws, &tags, &detail, &tree); err != nil {
-			panic(err)
+			if err == sql.ErrNoRows {
+				_ = context.AbortWithError(http.StatusNotFound, err)
+				return
+			} else {
+				panic(err)
+			}
 		}
 		fmt.Printf("[Detail] Reply successfully\n")
 		context.JSON(http.StatusOK, gin.H{
