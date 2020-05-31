@@ -159,8 +159,8 @@
                 this.sideView.content = attr.value
             },
             onClickRelating() {
-                let routeData = this.$router.resolve(`/?misc=${this.detail.slice(0, 200)}`); // limit 200 chars
-                window.open(routeData.href, '_blank');
+                let routeData = this.$router.resolve(`/?misc=${this.detail}`) // limit 200 chars
+                window.open(routeData.href, '_blank')
             },
             filter(item, search) {
                 if (item.attributes) {

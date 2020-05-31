@@ -5,11 +5,11 @@ module.exports = {
     devServer: {
         proxy: {
             '/api': {
-                target: 'http://localhost:8000',
+                target: 'http://59.110.47.157/',
                 changeOrigin: true,
-                pathRewrite: {
-                    '^/api': '/'
-                }
+                // pathRewrite: {
+                //     '^/api': '/'
+                // }
             },
         }
     }
