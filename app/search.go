@@ -170,6 +170,7 @@ func (db database) searchCaseIds(params []Param) (result ResultList, err error) 
 			weight FLOAT        NOT NULL,  # 用户输入的词的权重（idf或者输入词的次数）
 			PRIMARY KEY (item)             # 一对一映射
 		) CHAR SET utf8;`, tableId)
+	// println(createTable)
 	if _, err = db.Exec(createTable); err != nil {
 		return ResultList{}, err
 	}
@@ -177,6 +178,7 @@ func (db database) searchCaseIds(params []Param) (result ResultList, err error) 
 	// Drop after finish
 	defer func() {
 		drop := fmt.Sprintf(`DROP TABLE Weights%d`, tableId)
+		// println(drop)
 		if _, errDrop := db.Exec(drop); err == nil && errDrop != nil {
 			result, err = ResultList{}, errDrop
 		}
@@ -197,6 +199,7 @@ func (db database) searchCaseIds(params []Param) (result ResultList, err error) 
 					items = append(items, fmt.Sprintf("('%s',%f)", condition.Item, condition.Weight))
 				}
 				insert := fmt.Sprintf(`INSERT INTO Weights%d (item, weight) VALUES %s`, tableId, strings.Join(items, ","))
+				// println(insert)
 				if _, err = db.Exec(insert); err != nil {
 					return ResultList{}, err
 				}
@@ -224,6 +227,7 @@ func (db database) searchCaseIds(params []Param) (result ResultList, err error) 
 		FROM Weights%d a%s
 		WHERE %s
 		GROUP BY caseId ORDER BY weight DESC %s`, tableId, tables, conditions, limit)
+	// println(query)
 	var rows *sql.Rows
 	rows, err = db.Query(query)
 	if err != nil {
