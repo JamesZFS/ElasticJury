@@ -233,7 +233,7 @@ func (db database) searchCaseIds(params []Param) (result ResultList, err error) 
 		limit = ""
 	}
 	query := fmt.Sprintf(`
-		SELECT b.caseId AS caseId, sum(b.weight * a.weight) AS weight
+		SELECT b.caseId AS caseId, sum((b.weight * 0.4 + 0.6) * a.weight) AS weight
 		FROM Weights%d a%s
 		WHERE %s
 		GROUP BY caseId ORDER BY weight DESC %s`, tableId, tables, conditions, limit)

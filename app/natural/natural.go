@@ -113,7 +113,7 @@ func ParseFullText(text string) Conditions {
 		mean = 1.0
 	}
 	for i := range all {
-		weights[i] += mean / 2
+		weights[i] += mean
 	}
 	reduced := Reduce(words, weights)
 	sort.Sort(reduced)
