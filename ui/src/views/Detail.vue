@@ -5,8 +5,10 @@
             shaped
             :elevation="5"
             class="my-4"
+            :loading="loading"
     >
       <v-btn text absolute
+             v-show="!loading"
              @click="onClickRelating"
              class="ma-4"
              style="right: 0"
@@ -130,6 +132,7 @@
     export default {
         name: "Detail",
         data: () => ({
+            loading: true,
             openedPanels: [0, 1, 2, 4],
             id: 0,
             judges: [],
@@ -152,6 +155,7 @@
             data.tree = xmlToTree(data.tree)
             // load case detail & xml tree
             Object.assign(this, data)
+            this.loading = false
         },
         methods: {
             onClickAttribute(attr) {
@@ -159,7 +163,7 @@
                 this.sideView.content = attr.value
             },
             onClickRelating() {
-                let routeData = this.$router.resolve(`/?misc=${this.detail}`) // limit 200 chars
+                let routeData = this.$router.resolve(`/relating/${this.id}`)
                 window.open(routeData.href, '_blank')
             },
             filter(item, search) {
