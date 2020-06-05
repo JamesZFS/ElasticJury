@@ -39,7 +39,12 @@ func (db database) makeSearchHandler() gin.HandlerFunc {
 		}
 
 		fmt.Printf("[Search] Got request:\n")
-		fmt.Printf("[Search]  > Misc: %s\n", json.Misc)
+		miscLen := len(json.Misc)
+		if miscLen <= 100 {
+			fmt.Printf("[Search]  > Misc: %s\n", json.Misc)
+		} else {
+			fmt.Printf("[Search]  > Misc: %s...%s\n", json.Misc[:50], json.Misc[miscLen-50:])
+		}
 		fmt.Printf("[Search]  > Tag: %s\n", json.Tag)
 		fmt.Printf("[Search]  > Law: %s\n", json.Law)
 		fmt.Printf("[Search]  > Judge: %s\n", json.Judge)
@@ -137,7 +142,7 @@ func (db database) makeCaseDetailHandler() gin.HandlerFunc {
 		id, err := strconv.Atoi(context.Param("id"))
 		fmt.Printf("[Detail] Got request:\n")
 		fmt.Printf("[Detail]  > ID: %d\n", id)
-		if id <= 0 || err != nil {
+		if err != nil {
 			_ = context.AbortWithError(http.StatusBadRequest, err)
 			return
 		}
@@ -146,7 +151,12 @@ func (db database) makeCaseDetailHandler() gin.HandlerFunc {
 		)
 		if err := db.QueryRow("SELECT judges, laws, tags, detail, tree FROM Cases WHERE id = ?", id).
 			Scan(&judges, &laws, &tags, &detail, &tree); err != nil {
-			panic(err)
+			if err == sql.ErrNoRows {
+				_ = context.AbortWithError(http.StatusNotFound, err)
+				return
+			} else {
+				panic(err)
+			}
 		}
 		fmt.Printf("[Detail] Reply successfully\n")
 		context.JSON(http.StatusOK, gin.H{
@@ -170,6 +180,7 @@ func (db database) searchCaseIds(params []Param) (result ResultList, err error) 
 			weight FLOAT        NOT NULL,  # 用户输入的词的权重（idf或者输入词的次数）
 			PRIMARY KEY (item)             # 一对一映射
 		) CHAR SET utf8;`, tableId)
+	// println(createTable)
 	if _, err = db.Exec(createTable); err != nil {
 		return ResultList{}, err
 	}
@@ -177,6 +188,7 @@ func (db database) searchCaseIds(params []Param) (result ResultList, err error) 
 	// Drop after finish
 	defer func() {
 		drop := fmt.Sprintf(`DROP TABLE Weights%d`, tableId)
+		// println(drop)
 		if _, errDrop := db.Exec(drop); err == nil && errDrop != nil {
 			result, err = ResultList{}, errDrop
 		}
@@ -197,6 +209,7 @@ func (db database) searchCaseIds(params []Param) (result ResultList, err error) 
 					items = append(items, fmt.Sprintf("('%s',%f)", condition.Item, condition.Weight))
 				}
 				insert := fmt.Sprintf(`INSERT INTO Weights%d (item, weight) VALUES %s`, tableId, strings.Join(items, ","))
+				// println(insert)
 				if _, err = db.Exec(insert); err != nil {
 					return ResultList{}, err
 				}
@@ -220,10 +233,11 @@ func (db database) searchCaseIds(params []Param) (result ResultList, err error) 
 		limit = ""
 	}
 	query := fmt.Sprintf(`
-		SELECT b.caseId AS caseId, sum(b.weight * a.weight) AS weight
+		SELECT b.caseId AS caseId, sum((b.weight * 0.4 + 0.6) * a.weight) AS weight
 		FROM Weights%d a%s
 		WHERE %s
 		GROUP BY caseId ORDER BY weight DESC %s`, tableId, tables, conditions, limit)
+	// println(query)
 	var rows *sql.Rows
 	rows, err = db.Query(query)
 	if err != nil {

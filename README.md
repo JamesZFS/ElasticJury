@@ -1,8 +1,14 @@
 # ElasticJury 0.1.1
 
+
+![image-20200601010515162](./assets/screenshot1.png)
+
+
 An archetypical search engine for judiciary cases.
 
 By Fengshi Zheng and Chenggang Zhao
+
+Please take a look at our [presentation slides](./docs/presentation.key) or [report](./docs/report.pdf) :)
 
 ## Build & Deploy
 

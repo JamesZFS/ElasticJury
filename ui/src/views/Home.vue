@@ -186,7 +186,7 @@
             },
             dumpParams() {
                 let query = {};
-                if (this.misc.input) query.misc = this.misc.input.slice(0, 200) // limit 200 chars
+                if (this.misc.input) query.misc = this.misc.input // limit 200 chars
                 if (this.judges.inputs.length > 0) query.judge = this.judges.inputs.join(',')
                 if (this.laws.inputs.length > 0) query.law = this.laws.inputs.join(',')
                 if (this.tags.inputs.length > 0) query.tag = this.tags.inputs.join(',')
